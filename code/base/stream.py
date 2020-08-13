@@ -1,5 +1,7 @@
 from abc import abstractmethod, ABC
 
+import numpy as np
+
 
 class Stream(ABC):
 
@@ -52,7 +54,7 @@ class Stream(ABC):
         """
         Adds a post based on its unique identifier
         """
-        self._posts[post.get_property('uid')] = post
+        self._posts[post.__hash__()] = post
 
     def get_property(self, prop):
         """
@@ -73,6 +75,49 @@ class Stream(ABC):
                 msg = f'WARN: Property "{prop}" not found in {self}. Returning None.'
                 self.debug(msg)
                 return
+
+    def post_count(self):
+        return len(self._posts)
+
+    def comment_count(self):
+        try:
+            return self._meta['direct comments'], self._meta['nested comments']
+        except KeyError:
+            direct, nested = 0, 0
+            for post in self._posts.values():
+                d, n = post.comment_count()
+                direct += d
+                nested += n
+
+            self._meta['direct comments'] = direct
+            self._meta['nested comments'] = nested
+
+            return direct, nested
+
+    def token_count(self):
+        try:
+            return self._meta['tokens']
+        except KeyError:
+            tokens = 0
+            for post in self._posts.values():
+                tokens += post.token_count()
+
+            self._meta['tokens'] = tokens
+            return tokens
+
+    def stat(self):
+        print(f'Page: {self}\n')
+
+        print(f'Posts: {len(self._posts)}\n')
+
+        tokens = self.token_count()
+        direct, nested = self.comment_count()
+
+        print(f'Token count (by white-space): {tokens} (10^{np.log10(tokens):.2f})\n')
+
+        print(f'Direct comments: {direct}')
+        print(f'Nested comments: {nested}')
+        print(f'Total comments: {direct + nested}\n')
 
 
 if __name__ == '__main__':

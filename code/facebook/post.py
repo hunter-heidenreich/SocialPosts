@@ -9,7 +9,7 @@ sys.path.append('code/')
 from base.post import Post
 
 
-class FacebookPost(Post):
+class FBPost(Post):
 
     def __init__(self, name, uid):
         super().__init__(uid)
@@ -36,7 +36,7 @@ class FacebookPost(Post):
         return direct, nested
 
     def _load_comment(self, cs):
-        comm = FacebookPost(self._meta['name'], cs['id'])
+        comm = FBPost(self._meta['name'], cs['id'])
         comm.set_time(cs['created_time'])
         comm.set_text(cs['message'])
 
@@ -48,14 +48,22 @@ class FacebookPost(Post):
         self._comments[comm.__hash__()] = comm
 
     def load_from_file(self, filename):
-        for k, v in json.load(open(filename + 'posts.json')).items():
-            if k == 'created_time':
-                self.set_time(v)
-            elif k in ['description', 'message', 'story']:
-                self.set_text(v)
+        try:
+            for k, v in json.load(open(filename + 'posts.json')).items():
+                if k == 'created_time':
+                    self.set_time(v)
+                elif k in ['description', 'message', 'story']:
+                    self.set_text(v)
+        except FileNotFoundError:
+            pass
 
-        for comment in tqdm(json.load(open(filename + 'replies.json'))):
-            self._load_comment(comment)
+        try:
+            for comment in tqdm(json.load(open(filename + 'replies.json'))):
+                self._load_comment(comment)
+        except FileNotFoundError:
+            pass
+        except json.decoder.JSONDecodeError:
+            pass
 
     def __repr__(self):
         return f'Post<{self._meta["name"]}::{self._uid}>'
@@ -83,6 +91,6 @@ if __name__ == '__main__':
     uid = '1244975748928810'
     file = f'/Users/hsh28/PycharmProjects/BuzzFace/data/{name}/{uid}/'
 
-    p = FacebookPost(name, uid)
+    p = FBPost(name, uid)
     p.load_from_file(file)
     p.stat()
