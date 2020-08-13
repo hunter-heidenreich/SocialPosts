@@ -23,18 +23,6 @@ class FBPost(Post):
     def set_time(self, timestr):
         self._created_at = self.get_time(timestr)
 
-    def set_text(self, text):
-        self._text = text
-
-    def comment_count(self):
-        direct, nested = 0, 0
-        for comment in self._comments.values():
-            direct += 1
-            d, n = comment.comment_count()
-            nested += d + n
-
-        return direct, nested
-
     def _load_comment(self, cs):
         comm = FBPost(self._meta['name'], cs['id'])
         comm.set_time(cs['created_time'])
