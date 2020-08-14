@@ -43,22 +43,6 @@ if __name__ == '__main__':
 
         p.add_post(post)
 
-    # see if we have any other buzzface page posts, but weren't annotated
-    for f in glob(f'{bf_path}*/*/'):
-        ps = f.split('/')
-
-        uid = int(ps[-2])
-        name = ps[-3].replace('_', ' ')
-        page_id = page_id_lookup[name]
-
-        p = pages[page_id]
-
-        if uid not in p._posts:
-            post = FBPost(name, uid)
-            post.load_from_file(f)
-
-            p.add_post(post)
-
     # summarize the Facebook data we have on disk
     tokens = 0
     direct, nested = 0, 0

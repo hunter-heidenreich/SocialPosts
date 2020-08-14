@@ -1,3 +1,4 @@
+from datetime import datetime
 from abc import abstractmethod, ABC
 
 import numpy as np
@@ -31,14 +32,17 @@ class Stream(ABC):
         return int(self._uid) if self._uid else hash(f'{self._domain}::{self._name}')
 
     def debug(self, msg):
+        """Prints a message, based on whether debugging is enabled"""
         if self._debug:
-            print(msg)
+            print(f'{datetime.now()}: {msg}')
 
-    def add_meta(self, prop, value):
-        """
-        Adds additional meta information to this stream object
-        """
+    def set_meta(self, prop, value):
+        """Given a property and a value, updates the meta info dict"""
         self._meta[prop] = value
+
+    def get_meta(self, prop):
+        """Gets current prop value from meta"""
+        return self._meta.get(prop, None)
 
     def get_post(self, post_id):
         """
@@ -60,7 +64,6 @@ class Stream(ABC):
         """
         Returns the requested property from this object
         :param prop:
-        :return:
         """
         if prop == 'name':
             return self._name
@@ -69,41 +72,26 @@ class Stream(ABC):
         elif prop == 'domain':
             return self._domain
         else:
-            try:
-                return self._meta[prop]
-            except KeyError:
-                msg = f'WARN: Property "{prop}" not found in {self}. Returning None.'
-                self.debug(msg)
-                return
+            return self.get_meta(prop)
 
     def post_count(self):
+        """Counts the number of posts in this stream"""
         return len(self._posts)
 
     def comment_count(self):
-        try:
-            return self._meta['direct comments'], self._meta['nested comments']
-        except KeyError:
-            direct, nested = 0, 0
-            for post in self._posts.values():
-                d, n = post.comment_count()
-                direct += d
-                nested += n
+        direct, nested = 0, 0
+        for post in self._posts.values():
+            d, n = post.comment_count()
+            direct += d
+            nested += n
 
-            self._meta['direct comments'] = direct
-            self._meta['nested comments'] = nested
-
-            return direct, nested
+        return direct, nested
 
     def token_count(self):
-        try:
-            return self._meta['tokens']
-        except KeyError:
-            tokens = 0
-            for post in self._posts.values():
-                tokens += post.token_count()
-
-            self._meta['tokens'] = tokens
-            return tokens
+        tokens = 0
+        for post in self._posts.values():
+            tokens += post.token_count()
+        return tokens
 
     def stat(self):
         print(f'Page: {self}\n')
