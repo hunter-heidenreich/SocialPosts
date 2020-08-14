@@ -32,7 +32,7 @@ if __name__ == '__main__':
         if page_id not in pages:  # and pages[page_id] is None:
             page_id_lookup[name] = page_id
             p = FBPage(name, uid=page_id)
-            p.add_meta('news_category', row['Category'])
+            p.set_meta('news_category', row['Category'])
             pages[page_id] = p
 
         p = pages[page_id]
@@ -48,8 +48,6 @@ if __name__ == '__main__':
     direct, nested = 0, 0
     posts = 0
     for page in pages.values():
-        # page.stat()
-
         tokens += page.token_count()
 
         d, n = page.comment_count()
