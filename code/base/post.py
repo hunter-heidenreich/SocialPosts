@@ -1,8 +1,16 @@
 import re
+import string
 
 from abc import abstractmethod, ABC
+from collections import Counter
+
+import spacy
 
 import numpy as np
+
+from nltk.tokenize import word_tokenize
+
+SP = spacy.load('en_core_web_sm')
 
 
 class Post(ABC):
@@ -60,6 +68,42 @@ class Post(ABC):
             nested += d + n
 
         return direct, nested
+
+    def preprocess_thread(self):
+        """
+        Given a post (or sub-post), pre-processes the
+        text of that post to yield a "cleaned up" text
+        :return: The cleaned text to represent discourse
+        """
+        # to lowercase
+        text = self._text.lower()
+
+        # strip URLs
+        text = re.sub(r'https?:\S+', '', text)
+
+        # remove punctuation
+        text = text.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))
+
+        # tokenize
+        tokens = word_tokenize(text)
+
+        # remove empty tokens
+        tokens = [token for token in tokens if token]
+
+        # remove stop words
+        all_stopwords = SP.Defaults.stop_words
+        tokens = [token for token in tokens if token not in all_stopwords]
+
+        # remove 1 character tokens
+        tokens = [token for token in tokens if len(token) > 1]
+
+        # combine string
+        ts = ' '.join(tokens)
+
+        for cid in self._comments:
+            ts += ' ' + self._comments[cid].preprocess_thread()
+
+        return ts
 
     def stat(self):
         print(f'Object: {self}\n')
