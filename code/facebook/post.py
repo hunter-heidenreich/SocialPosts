@@ -56,22 +56,6 @@ class FBPost(Post):
     def __repr__(self):
         return f'Post<{self._meta["name"]}::{self._uid}>'
 
-    def token_count(self):
-        cnt = super().token_count()
-        for comment in self._comments.values():
-            cnt += comment.token_count()
-
-        return cnt
-
-    def stat(self):
-        super().stat()
-
-        # number of comments
-        direct, nested = self.comment_count()
-        print(f'Direct comments: {direct}')
-        print(f'Nested comments: {nested}')
-        print(f'Total comments: {direct+nested}')
-
 
 if __name__ == '__main__':
 

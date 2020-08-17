@@ -20,17 +20,20 @@ class Post(ABC):
         self._comments = {}
         self._meta = {}
 
-    def add_meta(self, prop, value):
+    def set_meta(self, prop, value):
         """
         Adds additional meta information to this post object
         """
         self._meta[prop] = value
 
     def get_meta(self, prop):
-        return self._meta[prop]
+        return self._meta.get(prop, None)
 
     def set_text(self, text):
         self._text = text
+
+    def get_text(self):
+        return self._text
 
     @abstractmethod
     def load_from_file(self, filename):
@@ -43,7 +46,11 @@ class Post(ABC):
         return int(self._uid)
 
     def token_count(self):
-        return len(re.split('\s+', self._text))
+        cnt = len(re.split('\s+', self._text))
+        for comment in self._comments.values():
+            cnt += comment.token_count()
+
+        return cnt
 
     def comment_count(self):
         direct, nested = 0, 0
@@ -59,3 +66,9 @@ class Post(ABC):
 
         cnt = self.token_count()
         print(f'Token count (by white-space): {cnt} (10^{np.log10(cnt):.2f})\n')
+
+        # number of comments
+        direct, nested = self.comment_count()
+        print(f'Direct comments: {direct}')
+        print(f'Nested comments: {nested}')
+        print(f'Total comments: {direct + nested}')

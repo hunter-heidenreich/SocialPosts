@@ -160,12 +160,5 @@ class RedditPost(Post):
     def get_delta_awarded_bot(self):
         return self.get_meta('body').startswith('Confirmed: 1 delta awarded to')
 
-    def token_count(self):
-        cnt = super().token_count()
-        for comment in self._comments.values():
-            cnt += comment.token_count()
-
-        return cnt
-
     def __hash__(self):
         return self._uid.__hash__()
