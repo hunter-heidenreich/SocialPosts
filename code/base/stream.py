@@ -44,6 +44,9 @@ class Stream(ABC):
         """Gets current prop value from meta"""
         return self._meta.get(prop, None)
 
+    def get_posts(self):
+        return self._posts
+
     def get_post(self, post_id):
         """
         Retrieves a post by its unique identifier
