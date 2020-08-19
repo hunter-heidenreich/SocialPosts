@@ -1,5 +1,4 @@
 import re
-import copy
 import json
 
 import sys
@@ -14,6 +13,10 @@ class RedditPost(Post):
         super().__init__(uid)
 
     def load_from_file(self, filename):
+        raise NotImplementedError()
+
+    @staticmethod
+    def format_time(timestr):
         raise NotImplementedError()
 
     @staticmethod
@@ -161,4 +164,4 @@ class RedditPost(Post):
         return self.get_meta('body').startswith('Confirmed: 1 delta awarded to')
 
     def __hash__(self):
-        return self._uid.__hash__()
+        return self._uid  # .__hash__()

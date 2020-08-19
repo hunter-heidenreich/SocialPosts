@@ -1,7 +1,7 @@
 import re
 import string
 
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABC, abstractstaticmethod
 from collections import Counter
 
 import spacy
@@ -46,6 +46,17 @@ class Post(ABC):
     @abstractmethod
     def load_from_file(self, filename):
         pass
+
+    @staticmethod
+    @abstractmethod
+    def format_time(s):
+        pass
+
+    def set_time(self, timestr):
+        self._created_at = self.format_time(timestr)
+
+    def get_time(self):
+        return self._created_at
 
     def __repr__(self):
         return f'Post<{self._uid}>'

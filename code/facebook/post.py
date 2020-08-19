@@ -17,11 +17,8 @@ class FBPost(Post):
         self._meta['name'] = name
 
     @staticmethod
-    def get_time(timestr):
+    def format_time(timestr):
         return datetime.strptime(timestr, '%Y-%m-%dT%H:%M:%S+0000')
-
-    def set_time(self, timestr):
-        self._created_at = self.get_time(timestr)
 
     def _load_comment(self, cs):
         comm = FBPost(self._meta['name'], cs['id'])
