@@ -21,6 +21,7 @@ class Post(ABC):
 
     def __init__(self, uid):
         self._uid = uid
+        self._pid = None
 
         self._created_at = None
 
@@ -42,6 +43,34 @@ class Post(ABC):
 
     def get_text(self):
         return self._text
+
+    @property
+    def pid(self):
+        return self._pid
+
+    @pid.setter
+    def pid(self, value):
+        self._pid = value
+
+    @property
+    def uid(self):
+        return self._uid
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        self._text = value
+
+    @property
+    def comments(self):
+        return self._comments
 
     @abstractmethod
     def load_from_file(self, filename):
