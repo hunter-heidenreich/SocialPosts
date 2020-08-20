@@ -27,7 +27,7 @@ class ChanStreamReader:
     def stat(self):
         self.board.stat()
 
-    def stat_subsets(self):
+    def stat_subsets(self, board):
         for f in glob('4chan_bf_ids*.json'):
             ids = json.load(open(f))
 
@@ -48,5 +48,5 @@ if __name__ == '__main__':
     chan = ChanStreamReader(args.board)
     json.dump(chan.extract_discourse_documents(), open(f'4chan_{args.board}_post_docs.json', 'w+'))
 
-    # chan.stat_subsets()
+    # chan.stat_subsets(args.board)
     # chan.stat()
