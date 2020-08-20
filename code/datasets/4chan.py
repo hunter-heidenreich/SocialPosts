@@ -3,17 +3,17 @@ import json
 
 from glob import glob
 
+from argparse import ArgumentParser
 from tqdm import tqdm
 
 import sys
 sys.path.append('code/')
 
 from chan.board import Board
-from chan.post import ChanPost
 
 
 class ChanStreamReader:
-    ROOT = '/Users/hsh28/PycharmProjects/SocialPosts/data/'
+    ROOT = 'data/'
 
     def __init__(self, board):
         board_path = f'{self.ROOT}{board}.json'
@@ -41,9 +41,12 @@ class ChanStreamReader:
 
 
 if __name__ == '__main__':
-    board = 'his'
-    chan = ChanStreamReader(board)
-    chan.stat_subsets()
+    parser = ArgumentParser('Dataset Analyzer for 4ChanStreams')
+    parser.add_argument('-b', '--board', dest='board', type=str, default='news')
+    args = parser.parse_args()
 
+    chan = ChanStreamReader(args.board)
+    json.dump(chan.extract_discourse_documents(), open(f'4chan_{args.board}_post_docs.json', 'w+'))
+
+    # chan.stat_subsets()
     # chan.stat()
-    # json.dump(chan.extract_discourse_documents(), open(f'4chan_{board}_post_docs.json', 'w+'))
