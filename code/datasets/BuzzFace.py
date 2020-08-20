@@ -57,6 +57,9 @@ class BuzzFace:
 
 if __name__ == '__main__':
     buzzface = BuzzFace()
-    docs = buzzface.extract_discourse_documents()
-    json.dump(docs, open('buzzface_post_docs.json', 'w+'))
+
+    # docs = buzzface.extract_discourse_documents()
+    # json.dump(docs, open('buzzface_post_docs.json', 'w+'))
+
+    json.dump(buzzface._page_id_lookup, open('buzzface_id_lookup.json', 'w+'))
 
