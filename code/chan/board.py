@@ -1,4 +1,5 @@
 import json
+import warnings
 
 from tqdm import tqdm
 
@@ -7,6 +8,10 @@ sys.path.append('code/')
 
 from base.stream import Stream
 from chan.post import ChanPost
+
+
+# to suppress bs4 warnings about a URL
+warnings.filterwarnings('ignore', message='.*looks like a URL.*')
 
 
 class Board(Stream):
@@ -18,7 +23,7 @@ class Board(Stream):
         posts = {}
         data = json.load(open(path))
 
-        for k, datum in data.items():
+        for k, datum in tqdm(data.items()):
             uid = int(k)
 
             post = ChanPost(uid)

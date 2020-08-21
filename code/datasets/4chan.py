@@ -58,6 +58,7 @@ if __name__ == '__main__':
     out = f'data/docs/{args.board}/'
     assert_dir(out)
     for i in range(100):
+        print(f'Processing {i:02d}.json')
         chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
         json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
