@@ -41,7 +41,7 @@ class ChanPost(Post):
         self.meta[prop] = raw_thread.get(prop, -1) == 1
 
         # time
-        self.set_time(raw_thread['time'])
+        self.created_at = raw_thread['time']
 
         # text
         prop = 'semantic_tag'
@@ -71,5 +71,5 @@ class ChanPost(Post):
 
         prop = 'resto'
         self.meta[prop] = raw_thread.get(prop, None)
-        self.pid = raw_thread.get(prop, None)
+        self.pid = int(raw_thread.get(prop, 0))
 

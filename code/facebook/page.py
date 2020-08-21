@@ -32,7 +32,7 @@ if __name__ == '__main__':
         if page_id not in pages:  # and pages[page_id] is None:
             page_id_lookup[name] = page_id
             p = FBPage(name, uid=page_id)
-            p.set_meta('news_category', row['Category'])
+            p.meta['news_category'] = row['Category']
             pages[page_id] = p
 
         p = pages[page_id]
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         post = FBPost(name, uid)
         post.load_from_file(f'{bf_path}{name.replace(" ", "_")}/{uid}/')
 
-        p.add_post(post)
+        p.posts[uid] = post
 
     # summarize the Facebook data we have on disk
     tokens = 0

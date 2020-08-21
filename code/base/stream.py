@@ -14,74 +14,64 @@ class Stream(ABC):
 
     def __init__(self, name, domain=None, uid=None, debug=True):
 
+        # text name
         self._name = name
+
+        # Website domain
         self._domain = domain
+
+        # unique identifier
         self._uid = uid
 
+        # Whether debugging is enabled
         self._debug = debug
 
         # additional, domain-dependent meta information storage
         self._meta = {}
 
+        # Dictionary of posts keyed by their uid
         self._posts = {}
 
     def __repr__(self):
         return f'Stream<{self._domain}::{self._name}({self._uid})>'
 
     def __hash__(self):
-        return int(self._uid) if self._uid else hash(f'{self._domain}::{self._name}')
+        return self._uid if self._uid else hash(f'{self._domain}::{self._name}')
 
     def debug(self, msg):
         """Prints a message, based on whether debugging is enabled"""
         if self._debug:
             print(f'{datetime.now()}: {msg}')
 
-    def set_meta(self, prop, value):
-        """Given a property and a value, updates the meta info dict"""
-        self._meta[prop] = value
+    @property
+    def name(self):
+        return self._name
 
-    def get_meta(self, prop):
-        """Gets current prop value from meta"""
-        return self._meta.get(prop, None)
+    @property
+    def domain(self):
+        return self._domain
 
-    def get_posts(self):
+    @property
+    def uid(self):
+        return self._uid
+
+    @property
+    def posts(self):
         return self._posts
 
-    def get_post(self, post_id):
-        """
-        Retrieves a post by its unique identifier
-        """
-        try:
-            return self._posts[post_id]
-        except KeyError:
-            msg = f'WARN: Property "{post_id}" not found in posts of {self}. Returning None.'
-            self.debug(msg)
-
-    def add_post(self, post):
-        """
-        Adds a post based on its unique identifier
-        """
-        self._posts[post.__hash__()] = post
-
-    def get_property(self, prop):
-        """
-        Returns the requested property from this object
-        :param prop:
-        """
-        if prop == 'name':
-            return self._name
-        elif prop == 'uid':
-            return self._uid
-        elif prop == 'domain':
-            return self._domain
-        else:
-            return self.get_meta(prop)
+    @property
+    def meta(self):
+        return self._meta
 
     def post_count(self):
         """Counts the number of posts in this stream"""
         return len(self._posts)
 
     def comment_count(self):
+        """
+        Recursively computes all direct children counts (posts)
+        and comments.
+        """
         direct, nested = 0, 0
         for post in self._posts.values():
             d, n = post.comment_count()
@@ -91,6 +81,10 @@ class Stream(ABC):
         return direct, nested
 
     def token_count(self):
+        """
+        Recursively computes the number of tokens
+        :return:
+        """
         tokens = 0
         for post in self._posts.values():
             tokens += post.token_count()

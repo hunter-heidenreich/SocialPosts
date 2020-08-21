@@ -27,13 +27,13 @@ class RedditCMV:
         for f in tqdm(files):
             comments = RedditPost.load_comments_from_file(os.path.join(self.ROOT, f))
             root = RedditPost.reconstruct_threads_from_submission(comments)
-            self._sub.add_post(root)
+            self._sub.posts[root.__hash__()] = root
 
     def stat(self):
         self._sub.stat()
 
     def extract_discourse_documents(self):
-        return {post_id: post.preprocess_thread() for post_id, post in tqdm(self._sub.get_posts().items())}
+        return {post_id: post.preprocess_thread() for post_id, post in tqdm(self._sub.posts.items())}
 
 
 if __name__ == '__main__':

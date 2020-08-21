@@ -26,6 +26,6 @@ if __name__ == '__main__':
     for f in tqdm(files):
         comments = RedditPost.load_comments_from_file(os.path.join(p, f))
         root = RedditPost.reconstruct_threads_from_submission(comments)
-        sub.add_post(root)
+        sub.posts[root.__hash__()] = root
 
     sub.stat()

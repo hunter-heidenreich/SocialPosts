@@ -22,8 +22,8 @@ class FBPost(Post):
 
     def _load_comment(self, cs):
         comm = FBPost(self._meta['name'], cs['id'])
-        comm.set_time(cs['created_time'])
-        comm.set_text(cs['message'])
+        comm.created_at = cs['created_time']
+        comm.text = cs['message']
 
         #  recursively build nested reply structure
         if 'replies' in cs:
@@ -36,9 +36,10 @@ class FBPost(Post):
         try:
             for k, v in json.load(open(filename + 'posts.json')).items():
                 if k == 'created_time':
-                    self.set_time(v)
+                    self.created_at = v
                 elif k in ['description', 'message', 'story']:
-                    self.set_text(v)
+                    self.text = v
+                self.meta[k] = v
         except FileNotFoundError:
             pass
 

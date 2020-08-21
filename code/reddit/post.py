@@ -42,26 +42,35 @@ class RedditPost(Post):
         result = RedditPost(uid)
 
         # add meta features from data
-        result.set_meta('parent_id', str(data.get('parent_id', '')))
-        result.set_meta('title', str(data.get('title', '')))
-        result.set_meta('controversiality', int(data.get('controversiality', 0)))
-        result.set_meta('gilded', int(data.get('gilded', 0)))
-        result.set_meta('edited', bool(data.get('edited', False)))
-        result.set_meta('created_utc', float(data.get('created_utc', 0.0)))
-        result.set_meta('downs', int(data.get('downs', 0)))
-        result.set_meta('link_id', str(data.get('link_id', '')))
-        result.set_meta('name', str(data.get('name', '')))
-        result.set_meta('archived', bool(data.get('archived', False)))
-        result.set_meta('created', float(data.get('created', 0.0)))
-        result.set_meta('body_html', str(data.get('body_html', '')))
-        result.set_meta('ups', int(data.get('ups', 0)))
-        result.set_meta('body', str(data.get('body', '')))
-        result.set_meta('user_reports', list(data.get('user_reports', [])))
-        result.set_meta('mod_reports', list(data.get('mod_reports', [])))
-        result.set_meta('author_name', str(data.get('author_name', '')))
+        # str
+        result.meta['parent_id'] = str(data.get('parent_id', ''))
+        result.meta['title'] = str(data.get('title', ''))
+        result.meta['link_id'] = str(data.get('link_id', ''))
+        result.meta['name'] = str(data.get('name', ''))
+        result.meta['body_html'] = str(data.get('body_html', ''))
+        result.meta['body'] = str(data.get('body', ''))
+        result.meta['author_name'] = str(data.get('author_name', ''))
+
+        # int
+        result.meta['controversiality'] = int(data.get('controversiality', 0))
+        result.meta['gilded'] = int(data.get('gilded', 0))
+        result.meta['downs'] = int(data.get('downs', 0))
+        result.meta['ups'] = int(data.get('ups', 0))
+
+        # bool
+        result.meta['edited'] = bool(data.get('edited', False))
+        result.meta['archived'] = bool(data.get('archived', False))
+
+        # float
+        result.meta['created_utc'] = float(data.get('created_utc', 0.0))
+        result.meta['created'] = float(data.get('created', 0.0))
+
+        # list
+        result.meta['user_reports'] = list(data.get('user_reports', []))
+        result.meta['mod_reports'] = list(data.get('mod_reports', []))
 
         # update post text
-        result.set_text((result.get_meta('title') + ' ' + result.get_meta('body')).strip())
+        result.text = (result.meta['title'] + ' ' + result.meta['body']).strip()
 
         return result
 
@@ -78,14 +87,14 @@ class RedditPost(Post):
         adjacency_matrix = dict()
         for comment in comments.values():
             # is this the root?
-            if comment.get_meta('parent_id') == '':
+            if comment.meta['parent_id'] == '':
                 assert root is None
                 root = comment
-                root_name = comment.get_meta('name')
+                root_name = comment.meta['name']
 
             # find the parent and add parent->child entry
-            parent_id = comment.get_meta('parent_id')
-            child_id = comment.get_meta('name')
+            parent_id = comment.meta['parent_id']
+            child_id = comment.meta['name']
 
             if len(parent_id) > 0:
                 if parent_id not in adjacency_matrix:
@@ -110,7 +119,7 @@ class RedditPost(Post):
             adj = adjacency_matrix[name]
             for label, post in adj.items():
                 comm = _process_children(post, label)
-                cur._comments[comm.__hash__()] = comm
+                cur.comments[comm.__hash__()] = comm
 
             return cur
 
@@ -123,7 +132,7 @@ class RedditPost(Post):
         a single (e.g., 1, 2 -> 12; 5, 2 -> 25)
         :return: integer or 0 if no rule violation is mentioned
         """
-        body = self.get_meta('body')
+        body = self.meta['body']
         if "your comment has been removed" in body:
             pattern = re.compile("> Comment Rule (\d+)")
             # convert to an integer (e.g., 1, 2 -> 12; 5, 2 -> 25)
@@ -140,7 +149,7 @@ class RedditPost(Post):
         :return: author name or empty string
         """
         author_pattern = re.compile('(\S+), your comment has been removed:')
-        found = author_pattern.findall(self.get_meta('body'))
+        found = author_pattern.findall(self.meta['body'])
         if len(found) == 1:
             return found[0]
         else:
@@ -161,7 +170,4 @@ class RedditPost(Post):
         return int(str_value) if str_value != '' else 0
 
     def get_delta_awarded_bot(self):
-        return self.get_meta('body').startswith('Confirmed: 1 delta awarded to')
-
-    def __hash__(self):
-        return self._uid  # .__hash__()
+        return self.meta['body'].startswith('Confirmed: 1 delta awarded to')

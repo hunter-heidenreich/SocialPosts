@@ -26,7 +26,7 @@ class BuzzFace:
             if page_id not in self._pages:
                 self._page_id_lookup[name] = page_id
                 p = FBPage(name, uid=page_id)
-                p.set_meta('news_category', row['Category'])
+                p.meta['news_category'] = row['Category']
                 self._pages[page_id] = p
 
             p = self._pages[page_id]
@@ -35,7 +35,7 @@ class BuzzFace:
             post = FBPost(name, uid)
             post.load_from_file(f'{self.ROOT}{name.replace(" ", "_")}/{uid}/')
 
-            p.add_post(post)
+            p.posts[uid] = post
 
     def extract_discourse_documents(self, group='page'):
         """
@@ -47,7 +47,7 @@ class BuzzFace:
         """
         if group == 'page':
             docs = {pageid:
-                        {postid: post.preprocess_thread() for postid, post in tqdm(page.get_posts().items())}
+                        {postid: post.preprocess_thread() for postid, post in tqdm(page.posts.items())}
                     for pageid, page in self._pages.items()}
         else:
             docs = {}

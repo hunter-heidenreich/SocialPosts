@@ -22,7 +22,7 @@ class ChanStreamReader:
         self.board.load_from_json(board_path)
 
     def extract_discourse_documents(self):
-        return {post_id: post.preprocess_thread() for post_id, post in tqdm(self.board.get_posts().items())}
+        return {post_id: post.preprocess_thread() for post_id, post in tqdm(self.board.posts.items())}
 
     def stat(self):
         self.board.stat()
@@ -34,7 +34,7 @@ class ChanStreamReader:
             print(f)
             sub_board = Board(uid=f'/{board}/', name=board)
             for ix in ids:
-                sub_board.add_post(self.board.get_post(int(ix)))
+                sub_board.posts[int(ix)] = self.board.posts[int(ix)]
 
             sub_board.stat()
             pdb.set_trace()

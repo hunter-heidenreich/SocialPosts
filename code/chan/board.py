@@ -32,7 +32,7 @@ class Board(Stream):
             if pid:
                 posts[pid].comments[uid] = post
             else:
-                self.add_post(posts[uid])
+                self.posts[uid] = posts[uid]
 
         # for now keeping this as is...
         # TODO: Recovering the broader quote structure through ">>{UID}"
