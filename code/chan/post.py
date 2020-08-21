@@ -1,11 +1,17 @@
 from datetime import datetime
 
 from bs4 import BeautifulSoup
+from bs4 import MarkupResemblesLocatorWarning
 
 import sys
 sys.path.append('code/')
 
 from base.post import Post
+
+import warnings
+# to suppress bs4 warnings about a URL
+warnings.filterwarnings('ignore', message='.*looks like a URL.*')
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning, module='bs4')
 
 
 class ChanPost(Post):
