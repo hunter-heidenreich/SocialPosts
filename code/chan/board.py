@@ -15,16 +15,17 @@ class Board(Stream):
         super().__init__(name, domain='4chan', uid=uid)
 
     def load_from_json(self, path):
-        data = json.load(open(path))
-
         posts = {}
-        for k, datum in tqdm(data.items()):
-            uid = int(k)
+        for i in tqdm(range(100)):
+            data = json.load(open(path + f'{i:02d}.json'))
 
-            post = ChanPost(uid)
-            post.load_from_file(datum)
+            for k, datum in data.items():
+                uid = int(k)
 
-            posts[uid] = post
+                post = ChanPost(uid)
+                post.load_from_file(datum)
+
+                posts[uid] = post
 
         for uid, post in tqdm(posts.items()):
             pid = post.pid
@@ -38,7 +39,7 @@ class Board(Stream):
 
 
 if __name__ == '__main__':
-    board_path = 'data/news.json'
+    board_path = 'data/'
     news = Board(name='Current News', uid='/news/')
     news.load_from_json(board_path)
     news.stat()

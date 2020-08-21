@@ -13,10 +13,10 @@ from chan.board import Board
 
 
 class ChanStreamReader:
-    ROOT = 'data/'
+    ROOT = 'data/stream/'
 
     def __init__(self, board):
-        board_path = f'{self.ROOT}{board}.json'
+        board_path = f'{self.ROOT}{board}/'
 
         self.board = Board(uid=f'/{board}/', name=board)
         self.board.load_from_json(board_path)
