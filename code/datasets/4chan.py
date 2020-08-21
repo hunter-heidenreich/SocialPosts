@@ -1,6 +1,7 @@
 import pdb
 import json
 
+from pathlib import Path
 from glob import glob
 
 from argparse import ArgumentParser
@@ -12,11 +13,20 @@ sys.path.append('code/')
 from chan.board import Board
 
 
+def assert_dir(dir_path):
+    """
+    create directory if it does not exist
+    """
+    dir_path = Path(dir_path)
+    if not dir_path.exists():
+        dir_path.mkdir(parents=True)
+
+
 class ChanStreamReader:
     ROOT = 'data/stream/'
 
-    def __init__(self, board):
-        board_path = f'{self.ROOT}{board}/'
+    def __init__(self, board, file='00.json'):
+        board_path = f'{self.ROOT}{board}/{file}'
 
         self.board = Board(uid=f'/{board}/', name=board)
         self.board.load_from_json(board_path)
@@ -45,8 +55,11 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--board', dest='board', type=str, default='news')
     args = parser.parse_args()
 
-    chan = ChanStreamReader(args.board)
-    json.dump(chan.extract_discourse_documents(), open(f'4chan_{args.board}_post_docs.json', 'w+'))
+    out = 'data/docs/'
+    assert_dir(out)
+    for i in range(100):
+        chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
+        json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
     # chan.stat_subsets(args.board)
     # chan.stat()

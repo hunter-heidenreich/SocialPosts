@@ -16,16 +16,15 @@ class Board(Stream):
 
     def load_from_json(self, path):
         posts = {}
-        for i in tqdm(range(100)):
-            data = json.load(open(path + f'{i:02d}.json'))
+        data = json.load(open(path))
 
-            for k, datum in data.items():
-                uid = int(k)
+        for k, datum in data.items():
+            uid = int(k)
 
-                post = ChanPost(uid)
-                post.load_from_file(datum)
+            post = ChanPost(uid)
+            post.load_from_file(datum)
 
-                posts[uid] = post
+            posts[uid] = post
 
         for uid, post in tqdm(posts.items()):
             pid = post.pid
