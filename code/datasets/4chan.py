@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--board', dest='board', type=str, default='news')
     args = parser.parse_args()
 
-    out = 'data/docs/'
+    out = f'data/docs/{args.board}/'
     assert_dir(out)
     for i in range(100):
         chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
