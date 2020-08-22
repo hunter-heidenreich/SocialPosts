@@ -121,34 +121,37 @@ def sample_4chan_by_bf(board):
 
     # load and extract r/cmv text
     # chan = json.load(open(f'4chan_{board}_post_docs.json'))
-    chan = {}
+
     for i in tqdm(range(100)):
+        chan = {}
         for k, v in json.load(open(f'data/docs/{board}/4chan_pol_post_docs_{i:02d}.json')).items():
             chan[k] = v
 
-    # create post_id locators
-    chan_ids, chan_text = [], []
-    for pid, text in tqdm(chan.items()):
-        chan_ids.append(pid)
-        chan_text.append(text)
+        # create post_id locators
+        chan_ids, chan_text = [], []
+        for pid, text in tqdm(chan.items()):
+            chan_ids.append(pid)
+            chan_text.append(text)
 
-    # combine full raw
-    raw = bf_text + chan_text
+        # combine full raw
+        raw = bf_text + chan_text
 
-    # create vectorizer
-    vec = TfidfVectorizer()
-    vec.fit(raw)
+        # create vectorizer
+        vec = TfidfVectorizer()
+        vec.fit(raw)
 
-    chan_vecs = vec.transform(chan_text)
-    bf_vecs = vec.transform(bf_text)
-    sims = cosine_similarity(bf_vecs, chan_vecs)
+        chan_vecs = vec.transform(chan_text)
+        bf_vecs = vec.transform(bf_text)
 
-    for thresh in np.arange(0.0, 0.95, 0.05):
-        mask = np.max(sims, axis=0) > thresh
-        ids = np.where(mask)[0]
+        sims = cosine_similarity(bf_vecs, chan_vecs)
+        maxs = np.max(sims, axis=0)
 
-        chan_subset = [chan_ids[idx] for idx in ids]
-        json.dump(list(chan_subset), open(f'out/4chan_{board}_bf_ids_{thresh}.json', 'w+'))
+        for thresh in np.arange(0.0, 0.95, 0.05):
+            mask = maxs > thresh
+            ids = np.where(mask)[0]
+
+            chan_subset = [chan_ids[idx] for idx in ids]
+            json.dump(list(chan_subset), open(f'out/4chan_{board}_{i:02d}_bf_ids_{thresh}.json', 'w+'))
 
 
 def main():
