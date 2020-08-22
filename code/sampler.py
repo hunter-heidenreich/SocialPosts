@@ -123,7 +123,7 @@ def sample_4chan_by_bf(board):
     # chan = json.load(open(f'4chan_{board}_post_docs.json'))
     chan = {}
     for i in tqdm(range(100)):
-        for k, v in json.load(open(f'data/docs/{board}/4chan_pol_post_docs_{i:02d}.json')):
+        for k, v in json.load(open(f'data/docs/{board}/4chan_pol_post_docs_{i:02d}.json')).items():
             chan[k] = v
 
     # create post_id locators
