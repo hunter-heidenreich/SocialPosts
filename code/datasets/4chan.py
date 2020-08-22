@@ -1,6 +1,7 @@
 import pdb
 import json
 
+from collections import defaultdict
 from pathlib import Path
 from glob import glob
 
@@ -37,16 +38,38 @@ class ChanStreamReader:
     def stat(self):
         self.board.stat()
 
-    def stat_subsets(self, board):
-        for f in glob('4chan_bf_ids*.json'):
-            ids = json.load(open(f))
+    @staticmethod
+    def stat_subsets(board):
+        # maintain a default dict to store counts (maybe multiple)
+        comments = defaultdict(int)
+        tokens = defaultdict(int)
 
-            print(f)
-            sub_board = Board(uid=f'/{board}/', name=board)
-            for ix in ids:
-                sub_board.posts[int(ix)] = self.board.posts[int(ix)]
+        # iterate through each subset of the data (00 - 99)
+        for i in tqdm(range(100)):
+            # construct chan stream
+            board_path = f'{ChanStreamReader.ROOT}{board}/{i:02d}.json'
+            chan = Board(uid=f'/{board}/', name=board)
+            chan.load_from_json(board_path)
 
-            sub_board.stat()
+            # from 0.00 to 0.90 keep subsetting the data
+            threshes = [i / 100 for i in range(0, 90, 5)]
+            for thresh in threshes:
+                path = f'out/4chan_{board}_{i:02d}_bf_ids_{thresh:0.2f}.json'
+                ids = json.load(open(path))
+
+                sub_board = Board(uid=f'/{board}/', name=board)
+                for ix in ids:
+                    sub_board.posts[int(ix)] = chan.posts[int(ix)]
+
+                d, n = sub_board.comment_count()
+                comments[thresh] += d + n
+
+                tokens[thresh] += sub_board.token_count()
+        # print total
+        for thresh in [i / 100 for i in range(0, 90, 5)]:
+            print(thresh)
+            print('comments:', comments[thresh])
+            print('tokens:', tokens[thresh])
             pdb.set_trace()
 
 
@@ -55,12 +78,15 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--board', dest='board', type=str, default='news')
     args = parser.parse_args()
 
-    out = f'data/docs/{args.board}/'
-    assert_dir(out)
-    for i in range(100):
-        print(f'Processing {i:02d}.json')
-        chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
-        json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
+    # for generating thread documents
+    # out = f'data/docs/{args.board}/'
+    # assert_dir(out)
+    # for i in range(100):
+    #     print(f'Processing {i:02d}.json')
+    #     chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
+    #     json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
-    # chan.stat_subsets(args.board)
+    # compute stats of different subsets
+    ChanStreamReader.stat_subsets(args.board)
+
     # chan.stat()
