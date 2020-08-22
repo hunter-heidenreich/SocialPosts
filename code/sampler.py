@@ -116,7 +116,7 @@ def sample_cmv_by_bf():
 
 def sample_4chan_by_bf(board):
     # load and extract buzzface text
-    bf = json.load(open('buzzface_post_docs.json'))
+    bf = json.load(open('out/buzzface_post_docs.json'))
     bf_text = [text for page in tqdm(bf.values()) for text in page.values()]
 
     # load and extract r/cmv text
@@ -148,7 +148,7 @@ def sample_4chan_by_bf(board):
         ids = np.where(mask)[0]
 
         chan_subset = [chan_ids[idx] for idx in ids]
-        json.dump(list(chan_subset), open(f'4chan_{board}_bf_ids_{thresh}.json', 'w+'))
+        json.dump(list(chan_subset), open(f'out/4chan_{board}_bf_ids_{thresh}.json', 'w+'))
 
 
 def main():
