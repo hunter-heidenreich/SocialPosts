@@ -57,7 +57,7 @@ class ChanStreamReader:
                     with open(outpath, 'w+') as ff:
                         ff.write(out + '\n')
 
-         print(f'Wrote {total} post-reply pairs.')
+        print(f'Wrote {total} post-reply pairs.')
 
     @staticmethod
     def stat_subsets(board):
