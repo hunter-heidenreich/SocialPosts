@@ -110,6 +110,20 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--thresh', dest='thresh', type=float)
     args = parser.parse_args()
 
+    import re
+    from glob import glob
+
+    tokens = 0
+    for f in tqdm(glob(f'data/post_reply/4chan-{args.board}/*.json')):
+        with open(f) as ff:
+            for line in ff.readlines():
+                data = json.loads(line)
+
+                tokens += len(re.split('\s+', data['source']))
+                tokens += len(re.split('\s+', data['reply']))
+
+    print(f'{tokens} tokens observed.')
+
     # for generating thread documents
     # out = f'data/docs/{args.board}/'
     # assert_dir(out)
@@ -118,4 +132,4 @@ if __name__ == '__main__':
     #     chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
     #     json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
-    ChanStreamReader.extract_post_reply_pairs(args.board, thresh=args.thresh)
+    # ChanStreamReader.extract_post_reply_pairs(args.board, thresh=args.thresh)
