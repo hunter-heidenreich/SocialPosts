@@ -59,8 +59,6 @@ class ChanStreamReader:
 
             print(f'Wrote {total} post-reply pairs.')
 
-
-
     @staticmethod
     def stat_subsets(board):
         # maintain a default dict to store counts (maybe multiple)
@@ -109,7 +107,4 @@ if __name__ == '__main__':
     #     chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
     #     json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
-    # compute stats of different subsets
-    ChanStreamReader.stat_subsets(args.board)
-
-    # chan.stat()
+    ChanStreamReader.extract_post_reply_pairs(args.board)
