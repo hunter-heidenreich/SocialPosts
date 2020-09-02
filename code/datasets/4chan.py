@@ -39,13 +39,23 @@ class ChanStreamReader:
         self.board.stat()
 
     @staticmethod
-    def extract_post_reply_pairs(board):
+    def extract_post_reply_pairs(board, thresh=None):
         total = 0
         for i in tqdm(range(100)):
             # construct chan stream
             board_path = f'{ChanStreamReader.ROOT}{board}/{i:02d}.json'
             chan = Board(uid=f'/{board}/', name=board)
             chan.load_from_json(board_path)
+
+            if thresh:
+                path = f'out/4chan_{board}_{i:02d}_bf_ids_{thresh:0.2f}.json'
+                ids = json.load(open(path))
+
+                sub_board = Board(uid=f'/{board}/', name=board)
+                for ix in ids:
+                    sub_board.posts[int(ix)] = chan.posts[int(ix)]
+
+                chan = sub_board
 
             for pid, post in tqdm(chan.posts.items()):
                 outpath = f'data/post_reply/4chan-{board}/{pid}.json'
@@ -97,6 +107,7 @@ class ChanStreamReader:
 if __name__ == '__main__':
     parser = ArgumentParser('Dataset Analyzer for 4ChanStreams')
     parser.add_argument('-b', '--board', dest='board', type=str, default='news')
+    parser.add_argument('-t', '--thresh', dest='thresh', type=float)
     args = parser.parse_args()
 
     # for generating thread documents
@@ -107,4 +118,4 @@ if __name__ == '__main__':
     #     chan = ChanStreamReader(args.board, file=f'{i:02d}.json')
     #     json.dump(chan.extract_discourse_documents(), open(f'{out}4chan_{args.board}_post_docs_{i:02d}.json', 'w+'))
 
-    ChanStreamReader.extract_post_reply_pairs(args.board)
+    ChanStreamReader.extract_post_reply_pairs(args.board, thresh=args.thresh)
