@@ -29,6 +29,20 @@ class RedditCMV:
             root = RedditPost.reconstruct_threads_from_submission(comments)
             self._sub.posts[root.__hash__()] = root
 
+    def generate_post_reply_pairs(self):
+        total = 0
+        for pid, post in tqdm(self._sub.posts.items()):
+            outpath = f'data/post_reply/r_cmv/{pid}.json'
+            pairs = post.extract_post_reply_pairs()
+
+            if pairs:
+                total += len(pairs)
+                out = '\n'.join([json.dumps(pair) for pair in pairs])
+                with open(outpath, 'w+') as ff:
+                    ff.write(out + '\n')
+
+        print(f'Wrote {total} post-reply pairs.')
+
     def stat(self):
         self._sub.stat()
 
@@ -37,11 +51,25 @@ class RedditCMV:
 
 
 if __name__ == '__main__':
-    k = 0.00
-    sub = RedditCMV(subset=json.load(open(f'cmv_bf_ids_{k:.2f}.json')))
-    sub.stat()
+    # k = 0.15
+    # sub = RedditCMV(subset=json.load(open(f'cmv_bf_ids_{k:.2f}.json')))
+    # sub.generate_post_reply_pairs()
 
-    import pdb
-    pdb.set_trace()
+    import re
+    from glob import glob
+
+    tokens = 0
+    for f in tqdm(glob('data/post_reply/r_cmv/*.json')):
+        with open(f) as ff:
+            for line in ff.readlines():
+                data = json.loads(line)
+
+                tokens += len(re.split('\s+', data['source']))
+                tokens += len(re.split('\s+', data['reply']))
+
+    print(f'{tokens} tokens observed.')
+
+    # sub.stat()
+
     # docs = r.extract_discourse_documents()
     # json.dump(docs, open('reddit_cmv_post_docs.json', 'w+'))

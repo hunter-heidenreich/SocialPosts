@@ -37,6 +37,31 @@ class BuzzFace:
 
             p.posts[uid] = post
 
+    def generate_time_series(self):
+        for pagename, pageid in self._page_id_lookup.items():
+            page = self._pages[pageid]
+
+            for pid, post in tqdm(page.posts.items()):
+                outpath = f'data/timeseries/buzzface/{pagename}_{pid}.json'
+                post.generate_time_series(outpath)
+
+    def generate_post_reply_pairs(self):
+        total = 0
+        for pagename, pageid in self._page_id_lookup.items():
+            page = self._pages[pageid]
+
+            for pid, post in tqdm(page.posts.items()):
+                outpath = f'data/post_reply/buzzface/{pagename}_{pid}.json'
+                pairs = post.extract_post_reply_pairs()
+
+                if pairs:
+                    total += len(pairs)
+                    out = '\n'.join([json.dumps(pair) for pair in pairs])
+                    with open(outpath, 'w+') as ff:
+                        ff.write(out + '\n')
+
+        print(f'Wrote {total} post-reply pairs.')
+
     def extract_discourse_documents(self, group='page'):
         """
         Extracts a list of text documents based on pre-processing
@@ -56,10 +81,28 @@ class BuzzFace:
 
 
 if __name__ == '__main__':
-    buzzface = BuzzFace()
+    # buzzface = BuzzFace()
+    # buzzface.generate_post_reply_pairs()
+
+    import re
+    from glob import glob
+
+    tokens = 0
+    for f in tqdm(glob('data/post_reply/buzzface/*.json')):
+        with open(f) as ff:
+            for line in ff.readlines():
+                data = json.loads(line)
+
+                tokens += len(re.split('\s+', data['source']))
+                tokens += len(re.split('\s+', data['reply']))
+
+    print(f'{tokens} tokens observed.')
+
+    # import pdb
+    # pdb.set_trace()
 
     # docs = buzzface.extract_discourse_documents()
     # json.dump(docs, open('buzzface_post_docs.json', 'w+'))
 
-    json.dump(buzzface._page_id_lookup, open('buzzface_id_lookup.json', 'w+'))
+    # json.dump(buzzface._page_id_lookup, open('buzzface_id_lookup.json', 'w+'))
 

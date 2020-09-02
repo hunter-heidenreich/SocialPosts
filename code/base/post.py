@@ -1,4 +1,5 @@
 import re
+import json
 import string
 
 from abc import abstractmethod, ABC
@@ -115,6 +116,78 @@ class Post(ABC):
             nested += d + n
 
         return direct, nested
+
+    def extract_post_reply_pairs(self):
+        direct = [{'source': self.text, 'reply': comment.text} for comment in self._comments.values()]
+        nested = []
+        for comment in self._comments.values():
+            nested.extend(comment.extract_post_reply_pairs())
+
+        return direct + nested
+
+    def generate_time_series(self, outpath):
+        """
+        Generates the full,
+        linear time series of an event
+
+        SHOULD only be called on source posts
+        """
+        try:
+            zed = {
+                'timestamp': self.created_at.timestamp() + 1,
+                'comment_type': 0,
+                'id': self.uid
+            }
+        except AttributeError:
+            return
+
+        points = [zed]
+        for comment in self._comments.values():
+            direct, nesteds = comment.extract_time_info()
+            direct['comment_type'] = 1  # for direct
+            for n in nesteds:
+                n['comment_type'] = 2  # for indirect descendant
+
+            points.append(direct)
+            points.extend(nesteds)
+
+        points.sort(key=lambda x: x['timestamp'])
+
+        points[0]['delta'] = 1
+        points[0]['index'] = 0
+        for i in range(1, len(points)):
+            points[i]['delta'] = points[i]['timestamp'] - points[i-1]['timestamp'] + 1
+            points[i]['index'] = i
+
+        with open(outpath, 'w+') as out:
+            for point in points:
+                out.write(f'{json.dumps(point)}\n')
+
+    def extract_time_info(self):
+        """
+        Extracts the necessary time series information for itself,
+        and its descendants.
+
+        A 2-tuple is returned to specify the difference between
+        top level and nested comments
+        """
+        series = []
+        for cid, comment in self._comments.items():
+            direct, nesteds = comment.extract_time_info()
+
+            # add nested
+            series.extend(nesteds)
+
+            # append direct commnet
+            series.append(direct)
+
+        # datapoint for this comment
+        this = {
+            'timestamp': self.created_at.timestamp(),
+            'id': self.uid
+        }
+
+        return this, series
 
     def preprocess_thread(self):
         """

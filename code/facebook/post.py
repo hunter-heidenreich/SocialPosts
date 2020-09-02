@@ -63,7 +63,10 @@ if __name__ == '__main__':
 
     p = FBPost(name, uid)
     p.load_from_file(file)
-    p.stat()
 
-    text = p.preprocess_thread()
-    print(text)
+    outpath = f'data/timeseries/buzzface/{name}_{uid}.json'
+    p.generate_time_series(outpath)
+    # p.stat()
+
+    # text = p.preprocess_thread()
+    # print(text)
