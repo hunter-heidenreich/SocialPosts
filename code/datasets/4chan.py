@@ -40,13 +40,13 @@ class ChanStreamReader:
 
     @staticmethod
     def extract_post_reply_pairs(board):
+        total = 0
         for i in tqdm(range(100)):
             # construct chan stream
             board_path = f'{ChanStreamReader.ROOT}{board}/{i:02d}.json'
             chan = Board(uid=f'/{board}/', name=board)
             chan.load_from_json(board_path)
 
-            total = 0
             for pid, post in tqdm(chan.posts.items()):
                 outpath = f'data/post_reply/4chan-{board}/{pid}.json'
                 pairs = post.extract_post_reply_pairs()
@@ -57,7 +57,7 @@ class ChanStreamReader:
                     with open(outpath, 'w+') as ff:
                         ff.write(out + '\n')
 
-            print(f'Wrote {total} post-reply pairs.')
+         print(f'Wrote {total} post-reply pairs.')
 
     @staticmethod
     def stat_subsets(board):
