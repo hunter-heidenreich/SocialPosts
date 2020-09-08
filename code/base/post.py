@@ -118,12 +118,15 @@ class Post(ABC):
         return direct, nested
 
     def extract_post_reply_pairs(self):
-        direct = [{'source': self.text, 'reply': comment.text} for comment in self._comments.values()]
-        nested = []
-        for comment in self._comments.values():
-            nested.extend(comment.extract_post_reply_pairs())
+        text = [{'id': self.uid, 'text': self.text}]
+        pairs = [{'reply': comment.uid, 'post': self.uid} for comment in self._comments.values()]
 
-        return direct + nested
+        for comment in self._comments.values():
+            t, p = comment.extract_post_reply_pairs()
+            text += t
+            pairs += p
+
+        return text, pairs
 
     def generate_time_series(self, outpath):
         """

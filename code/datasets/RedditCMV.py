@@ -30,18 +30,26 @@ class RedditCMV:
             self._sub.posts[root.__hash__()] = root
 
     def generate_post_reply_pairs(self):
-        total = 0
-        for pid, post in tqdm(self._sub.posts.items()):
-            outpath = f'data/post_reply/r_cmv/{pid}.json'
-            pairs = post.extract_post_reply_pairs()
+        total_pairs = 0
+        total_posts = 0
+        outpath = f'data/post_reply/reddit_r_cmv/'
 
+        for pid, post in tqdm(self._sub.posts.items()):
+            texts, pairs = post.extract_post_reply_pairs()
             if pairs:
-                total += len(pairs)
+                total_pairs += len(pairs)
                 out = '\n'.join([json.dumps(pair) for pair in pairs])
-                with open(outpath, 'w+') as ff:
+                with open(outpath + 'pairs.json', 'a+') as ff:
                     ff.write(out + '\n')
 
-        print(f'Wrote {total} post-reply pairs.')
+            if texts:
+                total_posts += len(texts)
+                out = '\n'.join([json.dumps(text) for text in texts])
+                with open(outpath + 'text.json', 'a+') as ff:
+                    ff.write(out + '\n')
+
+        print(f'Wrote {total_pairs} post-reply pairs.')
+        print(f'Wrote {total_posts} unique posts.')
 
     def stat(self):
         self._sub.stat()
@@ -51,9 +59,11 @@ class RedditCMV:
 
 
 if __name__ == '__main__':
-    # k = 0.15
-    # sub = RedditCMV(subset=json.load(open(f'cmv_bf_ids_{k:.2f}.json')))
-    # sub.generate_post_reply_pairs()
+    k = 0.15
+    sub = RedditCMV(subset=json.load(open(f'cmv_bf_ids_{k:.2f}.json')))
+    sub.generate_post_reply_pairs()
+
+    exit()
 
     import re
     from glob import glob

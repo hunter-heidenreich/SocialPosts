@@ -46,21 +46,29 @@ class BuzzFace:
                 post.generate_time_series(outpath)
 
     def generate_post_reply_pairs(self):
-        total = 0
+        total_pairs = 0
+        total_posts = 0
+        outpath = f'data/post_reply/fb_buzzface/'
+
         for pagename, pageid in self._page_id_lookup.items():
             page = self._pages[pageid]
 
             for pid, post in tqdm(page.posts.items()):
-                outpath = f'data/post_reply/buzzface/{pagename}_{pid}.json'
-                pairs = post.extract_post_reply_pairs()
-
+                texts, pairs = post.extract_post_reply_pairs()
                 if pairs:
-                    total += len(pairs)
+                    total_pairs += len(pairs)
                     out = '\n'.join([json.dumps(pair) for pair in pairs])
-                    with open(outpath, 'w+') as ff:
+                    with open(outpath + 'pairs.json', 'a+') as ff:
                         ff.write(out + '\n')
 
-        print(f'Wrote {total} post-reply pairs.')
+                if texts:
+                    total_posts += len(texts)
+                    out = '\n'.join([json.dumps(text) for text in texts])
+                    with open(outpath + 'text.json', 'a+') as ff:
+                        ff.write(out + '\n')
+
+        print(f'Wrote {total_pairs} post-reply pairs.')
+        print(f'Wrote {total_posts} unique posts.')
 
     def extract_discourse_documents(self, group='page'):
         """
@@ -81,8 +89,10 @@ class BuzzFace:
 
 
 if __name__ == '__main__':
-    # buzzface = BuzzFace()
-    # buzzface.generate_post_reply_pairs()
+    buzzface = BuzzFace()
+    buzzface.generate_post_reply_pairs()
+
+    exit()
 
     import re
     from glob import glob
