@@ -1,16 +1,4 @@
-import re
-import json
-import string
-
 from abc import abstractmethod, ABC
-
-import spacy
-
-import numpy as np
-
-from nltk.tokenize import word_tokenize
-
-SP = spacy.load('en_core_web_sm')
 
 
 class Post(ABC):
@@ -89,19 +77,6 @@ class Post(ABC):
     def created_at(self, timestr):
         self._created_at = self.format_time(timestr)
 
-    def token_count(self):
-        """
-        Basic token counting function.
-        Splits text by 1 or more space charcters
-        and counts all non-space chunks.
-        Recursively computes the counts of child comments.
-        """
-        cnt = len(re.split('\s+', self._text))
-        for comment in self._comments.values():
-            cnt += comment.token_count()
-
-        return cnt
-
     def comment_count(self):
         """
         Recursively computes the number of comments
@@ -118,6 +93,10 @@ class Post(ABC):
         return direct, nested
 
     def extract_post_reply_pairs(self):
+        """
+        Extracts the unique post text and paired post-replies
+        starting with this post as a source
+        """
         text = [{'id': self.uid, 'text': self.text}]
         pairs = [{'reply': comment.uid, 'post': self.uid} for comment in self._comments.values()]
 
@@ -128,111 +107,8 @@ class Post(ABC):
 
         return text, pairs
 
-    def generate_time_series(self, outpath):
-        """
-        Generates the full,
-        linear time series of an event
-
-        SHOULD only be called on source posts
-        """
-        try:
-            zed = {
-                'timestamp': self.created_at.timestamp() + 1,
-                'comment_type': 0,
-                'id': self.uid
-            }
-        except AttributeError:
-            return
-
-        points = [zed]
-        for comment in self._comments.values():
-            direct, nesteds = comment.extract_time_info()
-            direct['comment_type'] = 1  # for direct
-            for n in nesteds:
-                n['comment_type'] = 2  # for indirect descendant
-
-            points.append(direct)
-            points.extend(nesteds)
-
-        points.sort(key=lambda x: x['timestamp'])
-
-        points[0]['delta'] = 1
-        points[0]['index'] = 0
-        for i in range(1, len(points)):
-            points[i]['delta'] = points[i]['timestamp'] - points[i-1]['timestamp'] + 1
-            points[i]['index'] = i
-
-        with open(outpath, 'w+') as out:
-            for point in points:
-                out.write(f'{json.dumps(point)}\n')
-
-    def extract_time_info(self):
-        """
-        Extracts the necessary time series information for itself,
-        and its descendants.
-
-        A 2-tuple is returned to specify the difference between
-        top level and nested comments
-        """
-        series = []
-        for cid, comment in self._comments.items():
-            direct, nesteds = comment.extract_time_info()
-
-            # add nested
-            series.extend(nesteds)
-
-            # append direct commnet
-            series.append(direct)
-
-        # datapoint for this comment
-        this = {
-            'timestamp': self.created_at.timestamp(),
-            'id': self.uid
-        }
-
-        return this, series
-
-    def preprocess_thread(self):
-        """
-        Given a post (or sub-post), pre-processes the
-        text of that post to yield a "cleaned up" text
-        :return: The cleaned text to represent discourse
-        """
-        # to lowercase
-        text = self._text.lower()
-
-        # strip URLs
-        text = re.sub(r'https?:\S+', '', text)
-
-        # remove punctuation
-        text = text.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))
-
-        # tokenize
-        tokens = word_tokenize(text)
-
-        # remove empty tokens
-        tokens = [token for token in tokens if token]
-
-        # remove stop words
-        all_stopwords = SP.Defaults.stop_words
-        tokens = [token for token in tokens if token not in all_stopwords]
-
-        # remove 1 character tokens
-        tokens = [token for token in tokens if len(token) > 1]
-
-        # combine string
-        ts = ' '.join(tokens)
-
-        for cid in self._comments:
-            ts += ' ' + self._comments[cid].preprocess_thread()
-
-        return ts
-
     def stat(self):
         print(f'Object: {self}\n')
-
-        cnt = self.token_count()
-        print(f'Token count (by white-space): {cnt} (10^{np.log10(cnt):.2f})\n')
 
         # number of comments
         direct, nested = self.comment_count()

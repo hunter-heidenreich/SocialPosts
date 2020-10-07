@@ -1,7 +1,5 @@
 from datetime import datetime
-from abc import abstractmethod, ABC
-
-import numpy as np
+from abc import ABC
 
 
 class Stream(ABC):
@@ -80,31 +78,14 @@ class Stream(ABC):
 
         return direct, nested
 
-    def token_count(self):
-        """
-        Recursively computes the number of tokens
-        :return:
-        """
-        tokens = 0
-        for post in self._posts.values():
-            tokens += post.token_count()
-        return tokens
-
     def stat(self):
         print(f'Page: {self}\n')
 
         print(f'Posts: {len(self._posts)}\n')
 
-        tokens = self.token_count()
         direct, nested = self.comment_count()
-
-        print(f'Token count (by white-space): {tokens} (10^{np.log10(tokens):.2f})\n')
 
         print(f'Direct comments: {direct}')
         print(f'Nested comments: {nested}')
         print(f'Total comments: {direct + nested}\n')
 
-
-if __name__ == '__main__':
-    print(Stream('CNN', 'Facebook').__hash__())
-    print(Stream('CNN', 'Facebook').__hash__())
