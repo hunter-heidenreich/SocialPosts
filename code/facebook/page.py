@@ -45,7 +45,6 @@ if __name__ == '__main__':
     from tqdm import tqdm
 
     pages = {}
-    page_id_lookup = {}
     for d in ['data', 'data2', 'data3', 'datafull']:
         root = f'/Users/hsh28/data/BuzzFace/{d}/'
         print(root)
@@ -63,7 +62,6 @@ if __name__ == '__main__':
             if pid not in page.posts:
                 page.posts[pid] = post
             else:
-                # page.posts[pid] = \
                 page.posts[pid].merge_copies(post)
 
     # summarize the Facebook data we have on disk
