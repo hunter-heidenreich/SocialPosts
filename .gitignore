@@ -3,3 +3,8 @@ venv/
 .DS_Store
 __pycache__
 data/
+*.vocab
+*.model
+wandb/
+figs/
+out/
