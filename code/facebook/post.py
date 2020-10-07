@@ -12,47 +12,62 @@ from base.post import Post
 class FBPost(Post):
 
     def __init__(self, name, uid):
-        super().__init__(uid)
-
-        self._meta['name'] = name
+        super().__init__(uid, name=name)
 
     @staticmethod
     def format_time(timestr):
+        """
+        Converts a timestring in a Facebook post object
+        into a datetime format
+        """
         return datetime.strptime(timestr, '%Y-%m-%dT%H:%M:%S+0000')
 
-    def _load_comment(self, cs):
-        comm = FBPost(self._meta['name'], cs['id'])
+    @staticmethod
+    def comment_from_json(name, cs):
+        """
+        Given the JSON of a Facebook comment
+        (already loaded as an object),
+        converts it into a comment (to be embedded as a reply)
+        :param name:
+        :param cs:
+        :return:
+        """
+        comm = FBPost(name, cs['id'])
         comm.created_at = cs['created_time']
         comm.text = cs['message']
 
-        #  recursively build nested reply structure
         if 'replies' in cs:
             for r in cs['replies']:
-                comm._load_comment(r)
+                r_comm = FBPost.comment_from_json(name, r)
+                comm.add_comment(r_comm)
 
-        self._comments[comm.__hash__()] = comm
+        return comm
 
     def load_from_file(self, filename):
+        # extract text/meta information
         try:
             for k, v in json.load(open(filename + 'posts.json')).items():
                 if k == 'created_time':
                     self.created_at = v
                 elif k in ['description', 'message', 'story']:
                     self.text = v
+
                 self.meta[k] = v
         except FileNotFoundError:
             pass
 
+        # check for replies, if they're available
         try:
             for comment in tqdm(json.load(open(filename + 'replies.json'))):
-                self._load_comment(comment)
+                c = FBPost.comment_from_json(name, comment)
+                self.add_comment(c)
         except FileNotFoundError:
             pass
         except json.decoder.JSONDecodeError:
             pass
 
     def __repr__(self):
-        return f'Post<{self._meta["name"]}::{self._uid}>'
+        return f'Post<{self._name}::{self._uid}>'
 
 
 if __name__ == '__main__':
@@ -65,8 +80,5 @@ if __name__ == '__main__':
     p.load_from_file(file)
 
     outpath = f'data/timeseries/buzzface/{name}_{uid}.json'
-    p.generate_time_series(outpath)
-    # p.stat()
+    p.stat()
 
-    # text = p.preprocess_thread()
-    # print(text)

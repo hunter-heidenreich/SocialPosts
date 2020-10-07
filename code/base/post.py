@@ -7,12 +7,15 @@ class Post(ABC):
     Base class for posts on a stream
     """
 
-    def __init__(self, uid):
+    def __init__(self, uid, name=None):
         # unique identifier
         self._uid = uid
 
         # identifier of the parent
         self._pid = None
+
+        # name identifier for page/domain
+        self._name = name
 
         # datetime created
         self._created_at = None
@@ -59,6 +62,9 @@ class Post(ABC):
     @property
     def comments(self):
         return self._comments
+
+    def add_comment(self, comm):
+        self._comments[comm.__hash__()] = comm
 
     @abstractmethod
     def load_from_file(self, filename):
