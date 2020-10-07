@@ -63,8 +63,38 @@ class Post(ABC):
     def comments(self):
         return self._comments
 
+    def merge_copies(self, other):
+        import pdb
+
+        if self.created_at != other.created_at:
+            print('Mismatch in created_at')
+            pdb.set_trace()
+
+        if self.text != other.text:
+            print('Mismatch in text')
+            pdb.set_trace()
+
+        for comment_id, comment in other.comments.items():
+            if comment_id in self.comments:
+                self.comments[comment_id].merge_copies(comment)
+            else:
+                self.comments[comment_id] = comment
+
+        for k, v in other.meta.items():
+            if k in self.meta and self.meta[k] != v:
+                pass
+            else:
+                self.meta[k] = v
+
     def add_comment(self, comm):
-        self._comments[comm.__hash__()] = comm
+        xid = comm.__hash__()
+
+        if xid in self._comments:
+            print('Dup. ID found: ', xid)
+            import pdb
+            pdb.set_trace()
+
+        self._comments[xid] = comm
 
     @abstractmethod
     def load_from_file(self, filename):

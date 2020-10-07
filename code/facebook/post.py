@@ -58,11 +58,25 @@ class FBPost(Post):
 
         # check for replies, if they're available
         try:
-            for comment in tqdm(json.load(open(filename + 'replies.json'))):
-                c = FBPost.comment_from_json(name, comment)
+            for comment in json.load(open(filename + 'replies.json')):
+                c = FBPost.comment_from_json(self._name, comment)
                 self.add_comment(c)
         except FileNotFoundError:
-            pass
+            try:
+                data = json.load(open(filename + 'comments.json'))
+
+                if type(data) == dict and data:
+                    try:
+                        data = data['data']
+                    except KeyError:
+                        print('data not found in comments.json')
+                        import pdb
+                        pdb.set_trace()
+                for comment in data:
+                    c = FBPost.comment_from_json(self._name, comment)
+                    self.add_comment(c)
+            except FileNotFoundError:
+                pass
         except json.decoder.JSONDecodeError:
             pass
 
