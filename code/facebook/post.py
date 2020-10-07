@@ -77,6 +77,8 @@ class FBPost(Post):
                     self.add_comment(c)
             except FileNotFoundError:
                 pass
+            except json.decoder.JSONDecodeError:
+                pass
         except json.decoder.JSONDecodeError:
             pass
 

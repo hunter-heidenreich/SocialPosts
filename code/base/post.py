@@ -90,9 +90,7 @@ class Post(ABC):
         xid = comm.__hash__()
 
         if xid in self._comments:
-            print('Dup. ID found: ', xid)
-            import pdb
-            pdb.set_trace()
+            comm.merge_copies(self._comments[xid])
 
         self._comments[xid] = comm
 

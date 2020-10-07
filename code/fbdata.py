@@ -9,8 +9,11 @@ from facebook.post import FBPost
 class FBData(Dataset):
 
     def load(self):
-        for d in ['data', 'data2', 'data3', 'datafull']:
-            root = f'/Users/hsh28/data/BuzzFace/{d}/'
+        for d in [
+            'BuzzFace/data', 'BuzzFace/data2', 'BuzzFace/data3', 'BuzzFace/datafull',
+            'Outlets/data'
+        ]:
+            root = f'/Users/hsh28/data/{d}/'
             print(root)
 
             for f in tqdm(glob(root + '*/*/')):
