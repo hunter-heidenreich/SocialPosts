@@ -10,6 +10,10 @@ class Dataset(ABC):
     def load(self):
         pass
 
+    @abstractmethod
+    def write_post_replies(self):
+        pass
+
     def stat(self):
         # summarize the Facebook data we have on disk
         direct, nested = 0, 0

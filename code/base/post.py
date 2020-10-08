@@ -71,8 +71,8 @@ class Post(ABC):
             pdb.set_trace()
 
         if self.text != other.text:
-            print('Mismatch in text')
-            pdb.set_trace()
+            if len(other.text) > len(self.text):
+                self.text = other.text
 
         for comment_id, comment in other.comments.items():
             if comment_id in self.comments:

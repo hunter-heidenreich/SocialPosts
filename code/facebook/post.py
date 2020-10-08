@@ -49,7 +49,7 @@ class FBPost(Post):
             for k, v in json.load(open(filename + 'posts.json')).items():
                 if k == 'created_time':
                     self.created_at = v
-                elif k in ['description', 'message', 'story']:
+                elif k in ['description', 'message', 'story', 'name']:
                     self.text = v
 
                 self.meta[k] = v
