@@ -90,6 +90,7 @@ class Post(ABC):
         xid = comm.__hash__()
 
         if xid in self._comments:
+            print(xid)
             comm.merge_copies(self._comments[xid])
 
         self._comments[xid] = comm
@@ -126,18 +127,22 @@ class Post(ABC):
 
         return direct, nested
 
-    def extract_post_reply_pairs(self):
+    def extract_post_reply_pairs(self, text=None, pairs=None):
         """
         Extracts the unique post text and paired post-replies
         starting with this post as a source
         """
-        text = [{'id': self.uid, 'text': self.text}]
-        pairs = [{'reply': comment.uid, 'post': self.uid} for comment in self._comments.values()]
+        if not text:
+            text = {}
 
-        for comment in self._comments.values():
-            t, p = comment.extract_post_reply_pairs()
-            text += t
-            pairs += p
+        if not pairs:
+            pairs = {}
+
+        text[self.uid] = {'id': self.uid, 'text': self.text}
+        for cid in self.comments:
+            pairs[(self.uid, cid)] = {'post': self.uid, 'reply': cid}
+            if cid not in text:
+                text, pairs = self.comments[cid].extract_post_reply_pairs(text=text, pairs=pairs)
 
         return text, pairs
 

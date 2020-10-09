@@ -29,12 +29,21 @@ class Board(Stream):
         for uid, post in tqdm(posts.items()):
             pid = post.pid
             if pid:
-                posts[pid].comments[uid] = post
+                posts[pid].add_comment(post)
             else:
                 self.posts[uid] = posts[uid]
 
         # for now keeping this as is...
         # TODO: Recovering the broader quote structure through ">>{UID}"
+        for uid, post in tqdm(posts.items()):
+            refs = post.get_post_references()
+            for rid in refs:
+                try:
+                    ref = posts[rid]
+                except KeyError:
+                    continue
+
+                ref.add_comment(post)
 
 
 if __name__ == '__main__':

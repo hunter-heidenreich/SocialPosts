@@ -8,6 +8,66 @@ import seaborn as sns
 import pandas as pd
 
 
+def chan_data_stats():
+    stats = {}
+    for f in tqdm(glob('data/4chan/*/')):
+        page = f.split('/')[-2]
+        stats[page] = defaultdict(int)
+
+        with open(f + 'text.json') as ff:
+            stats[page]['text'] += len(ff.readlines())
+
+        with open(f + 'pairs.json') as ff:
+            stats[page]['pairs'] += len(ff.readlines())
+
+    totals = defaultdict(int)
+    for vs in stats.values():
+        for k, v in vs.items():
+            totals[k] += v
+
+    return stats, totals
+
+
+def gen_chan_table():
+    stats, totals = chan_data_stats()
+
+    latex = ''
+    latex += '\t\\hline\n'
+
+    for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+        latex += '\t'
+        latex += k.replace('_', ' ').replace('%', '\\%')
+        latex += ' & '
+
+        thresh = 50
+        p = 100 * v['text'] / totals['text']
+        if p > thresh:
+            latex += '\\textbf{' + f"{v['text']} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{v['text']} ({p:.2f}\\%)"
+
+        latex += ' & '
+        p = 100 * v['pairs'] / totals['pairs']
+        if p > thresh:
+            latex += '\\textbf{' + f"{v['pairs']} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{v['pairs']} ({p:.2f}\\%)"
+
+        latex += '\\\\ \n'
+
+    latex += '\t\\hline\n'
+    latex += '\t'
+    latex += 'Total'
+    latex += ' & '
+    latex += f"{totals['text']}"
+    latex += ' & '
+    latex += f"{totals['pairs']}"
+    latex += '\\\\ \n'
+    latex += '\t\\hline\n'
+
+    print(latex)
+
+
 def facebook_data_stats():
     stats = {}
     for f in tqdm(glob('data/fb/*/')):
@@ -104,4 +164,7 @@ def gen_facebook_table():
 
 if __name__ == '__main__':
     # facebook_data_stats()
-    facebook_histogram()
+    # gen_facebook_table()
+    # facebook_histogram()
+
+    gen_chan_table()

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from bs4 import BeautifulSoup
@@ -79,3 +80,46 @@ class ChanPost(Post):
         self.meta[prop] = raw_thread.get(prop, None)
         self.pid = int(raw_thread.get(prop, 0))
 
+    def get_post_references(self):
+        refs = re.findall('>>\d+\s', self.text)
+        refs = [int(r.strip().replace('>', '')) for r in refs]
+        refs = [r for r in refs if r != self.pid]
+        return refs
+
+    def comment_count(self, rec=True):
+        """
+        Recursively computes the number of comments
+        that are descendants of this comment.
+        Returns a 2-tuple of all the direct children
+        of this post and all the nested comments.
+        """
+        direct, nested = 0, 0
+        for comment in self._comments.values():
+            direct += 1
+            if rec:
+                d, n = comment.comment_count(rec=False)
+                nested += d + n
+
+        return direct, nested
+
+    def merge_copies(self, other):
+        import pdb
+        if self.created_at != other.created_at:
+            print('Mismatch in created_at')
+            pdb.set_trace()
+
+        if self.text != other.text:
+            if len(other.text) > len(self.text):
+                self.text = other.text
+
+        for comment_id, comment in other.comments.items():
+            if comment_id in self.comments:
+                continue
+            else:
+                self.comments[comment_id] = comment
+
+        for k, v in other.meta.items():
+            if k in self.meta and self.meta[k] != v:
+                pass
+            else:
+                self.meta[k] = v
