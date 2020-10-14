@@ -38,6 +38,10 @@ class Post(ABC):
     @property
     def uid(self):
         return self._uid
+    
+    @property
+    def name(self):
+        return self._name
 
     @property
     def pid(self):

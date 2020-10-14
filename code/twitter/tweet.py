@@ -45,7 +45,6 @@ class Tweet(Post):
 
             if 'urls' in ents and ents['urls']:
                 for url in ents['urls']:
-                    print('URL')
                     t.text = t.text.replace(url['url'], url['expanded_url'])
 
         return t
