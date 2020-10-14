@@ -30,6 +30,12 @@ def chan_data_stats():
 
 def gen_chan_table():
     stats, totals = chan_data_stats()
+    scale = 1_000_000
+
+    uniform = 100 / len(stats)
+    mult = 4
+    double = mult * uniform
+    half = uniform / mult
 
     latex = ''
     latex += '\t\\hline\n'
@@ -39,19 +45,22 @@ def gen_chan_table():
         latex += k.replace('_', ' ').replace('%', '\\%')
         latex += ' & '
 
-        thresh = 50
         p = 100 * v['text'] / totals['text']
-        if p > thresh:
-            latex += '\\textbf{' + f"{v['text']} ({p:.2f}\\%)" + '}'
+        if p > double:
+            latex += '\\textbf{' + f"{v['text']/scale:.1f} M ({p:.2f}\\%)" + '}'
+        elif p < half:
+            latex += '\\underline{' + f"{v['text'] / scale:.1f} M ({p:.2f}\\%)" + '}'
         else:
-            latex += f"{v['text']} ({p:.2f}\\%)"
+            latex += f"{v['text']/scale:.1f} M ({p:.2f}\\%)"
 
         latex += ' & '
         p = 100 * v['pairs'] / totals['pairs']
-        if p > thresh:
-            latex += '\\textbf{' + f"{v['pairs']} ({p:.2f}\\%)" + '}'
+        if p > double:
+            latex += '\\textbf{' + f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)" + '}'
+        elif p < half:
+            latex += '\\underline{' + f"{v['pairs'] / scale:.1f} M ({p:.2f}\\%)" + '}'
         else:
-            latex += f"{v['pairs']} ({p:.2f}\\%)"
+            latex += f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)"
 
         latex += '\\\\ \n'
 
@@ -59,9 +68,9 @@ def gen_chan_table():
     latex += '\t'
     latex += 'Total'
     latex += ' & '
-    latex += f"{totals['text']}"
+    latex += f"{totals['text']/scale:.1f}"
     latex += ' & '
-    latex += f"{totals['pairs']}"
+    latex += f"{totals['pairs']/scale:.1f}"
     latex += '\\\\ \n'
     latex += '\t\\hline\n'
 
@@ -115,6 +124,10 @@ def facebook_histogram():
 def gen_facebook_table():
     stats, totals = facebook_data_stats()
 
+    uniform = 100 / len(stats)
+    double = 2 * uniform
+    half = 0.5 * uniform
+
     latex = ''
     latex += '\t\\hline\n'
 
@@ -128,28 +141,60 @@ def gen_facebook_table():
         latex += ' & '
 
         p = 100 * v['text'] / totals['text']
-        if p > 2:
-            latex += '\\textbf{' + f"{v['text']} ({p:.2f}\\%)" + '}'
+        if v['text'] > 100_000:
+            label = f"{v['text'] / 1_000_000:.1f} M"
+        elif v['text'] > 100:
+            label = f"{v['text'] / 1_000:.1f} K"
         else:
-            latex += f"{v['text']} ({p:.2f}\\%)"
+            label = f"{v['text']}"
+
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        elif p < half:
+            latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
 
         latex += ' & '
         p = 100 * v['pairs'] / totals['pairs']
-        if p > 2:
-            latex += '\\textbf{' + f"{v['pairs']} ({p:.2f}\\%)" + '}'
+        if v['text'] > 100_000:
+            label = f"{v['pairs'] / 1_000_000:.1f} M"
+        elif v['text'] > 100:
+            label = f"{v['pairs'] / 1_000:.1f} K"
         else:
-            latex += f"{v['pairs']} ({p:.2f}\\%)"
+            label = f"{v['pairs']}"
+
+        if p >double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        elif p < half:
+            latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
 
         if ix % 2 == 1:
             latex += '\\\\ \n'
+
+    if totals['text'] > 100_000:
+        t_label = f"{totals['text'] / 1_000_000:.1f} M"
+    elif totals['text'] > 100:
+        t_label = f"{totals['text'] / 1_000:.1f} K"
+    else:
+        t_label = f"{totals['text']}"
+
+    if totals['pairs'] > 100_000:
+        p_label = f"{totals['pairs'] / 1_000_000:.1f} M"
+    elif totals['pairs'] > 100:
+        p_label = f"{totals['pairs'] / 1_000:.1f} K"
+    else:
+        p_label = f"{totals['pairs']}"
 
     latex += '\t\\hline\n'
     latex += '\t'
     latex += 'Total'
     latex += ' & '
-    latex += f"{totals['text']}"
+    latex += f"{t_label}"
     latex += ' & '
-    latex += f"{totals['pairs']}"
+    latex += f"{p_label}"
     latex += ' & '
     latex += ''
     latex += ' & '
