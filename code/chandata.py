@@ -56,8 +56,9 @@ if __name__ == '__main__':
     # board = 'news'
     # board = 'his'
     # board = 'sci'
-    board = 'x'
+    # board = 'x'
     # board = 'g'
+    board = 'pol'
 
     for ix in tqdm(range(100)):
         data = ChanData()
