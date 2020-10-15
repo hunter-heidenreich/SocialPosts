@@ -1,7 +1,6 @@
 import json
 
 from datetime import datetime
-from tqdm import tqdm
 
 import sys
 sys.path.append('code/')

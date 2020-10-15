@@ -32,8 +32,12 @@ class TwitterThread(Stream):
         for pid, children in topo.items():
             if pid not in tweets:
                 print(f'Warn: Tweet {pid} not found... Using meta placeholder (ID and screen_name).')
-                m = metas[pid]
-                t = Tweet(m['id'], name=m['user']['screen_name'])
+                try:
+                    m = metas[pid]
+                    t = Tweet(m['id'], name=m['user']['screen_name'])
+                except KeyError:
+                    print(f'No meta information for {pid}')
+                    t = Tweet(pid)
             else:
                 t = tweets[pid]
 
