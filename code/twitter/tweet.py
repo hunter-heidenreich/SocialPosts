@@ -34,7 +34,11 @@ class Tweet(Post):
         t = Tweet(tid, name=name)
 
         t.created_at = data['created_at']
-        t.text = data['full_text']
+
+        try:
+            t.text = data['full_text']
+        except KeyError:
+            t.text = data['text']
 
         ents = data['entities']
         if ents:

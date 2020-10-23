@@ -97,6 +97,26 @@ def facebook_data_stats():
     return stats, totals
 
 
+def twitter_data_stats():
+    stats = {}
+    for f in tqdm(glob('data/twitter/*/')):
+        page = f.split('/')[-2]
+        stats[page] = defaultdict(int)
+
+        with open(f + 'text.json') as ff:
+            stats[page]['text'] += len(ff.readlines())
+
+        with open(f + 'pairs.json') as ff:
+            stats[page]['pairs'] += len(ff.readlines())
+
+    totals = defaultdict(int)
+    for vs in stats.values():
+        for k, v in vs.items():
+            totals[k] += v
+
+    return stats, totals
+
+
 def facebook_histogram():
     stats, totals = facebook_data_stats()
 
@@ -207,9 +227,83 @@ def gen_facebook_table():
     print(latex)
 
 
+def gen_twitter_table():
+    stats, totals = twitter_data_stats()
+
+    double = 5
+
+    # filter step
+    thresh = 0.001
+    stats = {k: stats[k] for k in stats if stats[k]['text'] / totals['text'] > thresh}
+
+    latex = ''
+    latex += '\t\\hline\n'
+
+    for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+        latex += '\t'
+        latex += k
+        latex += ' & '
+
+        p = 100 * v['text'] / totals['text']
+        if v['text'] > 100_000:
+            label = f"{v['text'] / 1_000_000:.2f} M"
+        elif v['text'] > 100:
+            label = f"{v['text'] / 1_000:.2f} K"
+        else:
+            label = f"{v['text']}"
+
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        latex += ' & '
+        p = 100 * v['pairs'] / totals['pairs']
+        if v['text'] > 100_000:
+            label = f"{v['pairs'] / 1_000_000:.2f} M"
+        elif v['text'] > 100:
+            label = f"{v['pairs'] / 1_000:.2f} K"
+        else:
+            label = f"{v['pairs']}"
+
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        latex += '\\\\ \n'
+
+    if totals['text'] > 100_000:
+        t_label = f"{totals['text'] / 1_000_000:.2f} M"
+    elif totals['text'] > 100:
+        t_label = f"{totals['text'] / 1_000:.2f} K"
+    else:
+        t_label = f"{totals['text']}"
+
+    if totals['pairs'] > 100_000:
+        p_label = f"{totals['pairs'] / 1_000_000:.2f} M"
+    elif totals['pairs'] > 100:
+        p_label = f"{totals['pairs'] / 1_000:.2f} K"
+    else:
+        p_label = f"{totals['pairs']}"
+
+    latex += '\t\\hline\n'
+    latex += '\t'
+    latex += 'Total'
+    latex += ' & '
+    latex += f"{t_label}"
+    latex += ' & '
+    latex += f"{p_label}"
+    latex += '\\\\ \n'
+    latex += '\t\\hline\n'
+
+    print(latex)
+
+
 if __name__ == '__main__':
     # facebook_data_stats()
     # gen_facebook_table()
     # facebook_histogram()
 
-    gen_chan_table()
+    # gen_chan_table()
+    gen_twitter_table()
