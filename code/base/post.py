@@ -109,8 +109,9 @@ class Post(ABC):
         xid = comm.__hash__()
 
         if xid in self._comments:
-            print(xid)
-            comm.merge_copies(self._comments[xid])
+            # print(xid)
+            # comm.merge_copies(self._comments[xid])
+            return
 
         self._comments[xid] = comm
 

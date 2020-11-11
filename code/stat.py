@@ -81,12 +81,19 @@ def gen_chan_table():
 
 def facebook_data_stats():
     stats = {}
+    srcs = defaultdict(int)
     for f in tqdm(glob('data/fb/*/')):
         page = f.split('/')[-2]
         stats[page] = defaultdict(int)
 
         with open(f + 'text.json') as ff:
-            stats[page]['text'] += len(ff.readlines())
+            lines = ff.readlines()
+            stats[page]['text'] += len(lines)
+
+            for line in lines:
+                dat = json.loads(line)
+                if dat['is_source']:
+                    srcs[page] += 1
 
         with open(f + 'pairs.json') as ff:
             stats[page]['pairs'] += len(ff.readlines())
@@ -96,7 +103,7 @@ def facebook_data_stats():
         for k, v in vs.items():
             totals[k] += v
 
-    return stats, totals
+    return stats, totals, srcs
 
 
 def format_num(num):
@@ -164,7 +171,7 @@ def twitter_data_stats():
 
 
 def facebook_histogram():
-    stats, totals = facebook_data_stats()
+    stats, totals, _ = facebook_data_stats()
 
     df = []
     for k, v in stats.items():
@@ -188,89 +195,171 @@ def facebook_histogram():
 
 
 def gen_facebook_table():
-    stats, totals = facebook_data_stats()
+    stats, totals, srcs = facebook_data_stats()
 
-    uniform = 100 / len(stats)
-    double = 2 * uniform
-    half = 0.5 * uniform
+    double = 5
+
+    # filter step
+    thresh = 0.01
+    stats = {k: stats[k] for k in stats if stats[k]['text'] / totals['text'] > thresh}
 
     latex = ''
     latex += '\t\\hline\n'
 
     for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
-        if ix % 2 == 0:
-            latex += '\t'
-        else:
-            latex += '& '
+        key = str(k)
 
+        latex += '\t'
         latex += k.replace('_', ' ').replace('%', '\\%')
-        latex += ' & '
 
+        # Tally source tweets
+        latex += ' & '
+        latex += format_num(srcs[key])
+
+        # Tally unique posts
+        latex += ' & '
         p = 100 * v['text'] / totals['text']
-        if v['text'] > 100_000:
-            label = f"{v['text'] / 1_000_000:.1f} M"
-        elif v['text'] > 100:
-            label = f"{v['text'] / 1_000:.1f} K"
-        else:
-            label = f"{v['text']}"
+        label = format_num(v['text'])
 
         if p > double:
             latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
-        elif p < half:
-            latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
         else:
             latex += f"{label} ({p:.2f}\\%)"
 
+        # Tally conversational pairs
         latex += ' & '
         p = 100 * v['pairs'] / totals['pairs']
-        if v['text'] > 100_000:
-            label = f"{v['pairs'] / 1_000_000:.1f} M"
-        elif v['text'] > 100:
-            label = f"{v['pairs'] / 1_000:.1f} K"
-        else:
-            label = f"{v['pairs']}"
+        label = format_num(v['pairs'])
 
-        if p >double:
+        if p > double:
             latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
-        elif p < half:
-            latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
         else:
             latex += f"{label} ({p:.2f}\\%)"
 
-        if ix % 2 == 1:
-            latex += '\\\\ \n'
+        # Unique voices
+        latex += ' & '
+        latex += 'Unk.'
 
-    if totals['text'] > 100_000:
-        t_label = f"{totals['text'] / 1_000_000:.1f} M"
-    elif totals['text'] > 100:
-        t_label = f"{totals['text'] / 1_000:.1f} K"
-    else:
-        t_label = f"{totals['text']}"
+        # Num space-separated tokens
+        # latex += ' & '
 
-    if totals['pairs'] > 100_000:
-        p_label = f"{totals['pairs'] / 1_000_000:.1f} M"
-    elif totals['pairs'] > 100:
-        p_label = f"{totals['pairs'] / 1_000:.1f} K"
-    else:
-        p_label = f"{totals['pairs']}"
+        # Num unique space-separated tokens
+        # latex += ' & '
+
+        latex += ' \\\\ \n'
 
     latex += '\t\\hline\n'
     latex += '\t'
     latex += 'Total'
+
+    # Tally source tweets
     latex += ' & '
-    latex += f"{t_label}"
+    latex += format_num(sum(srcs.values()))
+
+    # Tally unique posts
     latex += ' & '
-    latex += f"{p_label}"
+    latex += format_num(totals['text'])
+
+    # Tally conversational pairs
     latex += ' & '
-    latex += ''
+    latex += format_num(totals['pairs'])
+
+    # Unique voices
     latex += ' & '
-    latex += f""
-    latex += ' & '
-    latex += f""
+    latex += 'Unk.'
+
+    # Num space-separated tokens
+    # latex += ' & '
+
+    # Num unique space-separated tokens
+    # latex += ' & '
+
     latex += '\\\\ \n'
     latex += '\t\\hline\n'
 
     print(latex)
+
+    # uniform = 100 / len(stats)
+    # double = 2 * uniform
+    # half = 0.5 * uniform
+    #
+    # latex = ''
+    # latex += '\t\\hline\n'
+    #
+    # for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+    #     if ix % 2 == 0:
+    #         latex += '\t'
+    #     else:
+    #         latex += '& '
+    #
+    #     latex += k.replace('_', ' ').replace('%', '\\%')
+    #     latex += ' & '
+    #
+    #     p = 100 * v['text'] / totals['text']
+    #     if v['text'] > 100_000:
+    #         label = f"{v['text'] / 1_000_000:.1f} M"
+    #     elif v['text'] > 100:
+    #         label = f"{v['text'] / 1_000:.1f} K"
+    #     else:
+    #         label = f"{v['text']}"
+    #
+    #     if p > double:
+    #         latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+    #     elif p < half:
+    #         latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
+    #     else:
+    #         latex += f"{label} ({p:.2f}\\%)"
+    #
+    #     latex += ' & '
+    #     p = 100 * v['pairs'] / totals['pairs']
+    #     if v['text'] > 100_000:
+    #         label = f"{v['pairs'] / 1_000_000:.1f} M"
+    #     elif v['text'] > 100:
+    #         label = f"{v['pairs'] / 1_000:.1f} K"
+    #     else:
+    #         label = f"{v['pairs']}"
+    #
+    #     if p >double:
+    #         latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+    #     elif p < half:
+    #         latex += '\\underline{' + f"{label} ({p:.2f}\\%)" + '}'
+    #     else:
+    #         latex += f"{label} ({p:.2f}\\%)"
+    #
+    #     if ix % 2 == 1:
+    #         latex += '\\\\ \n'
+    #
+    # if totals['text'] > 100_000:
+    #     t_label = f"{totals['text'] / 1_000_000:.1f} M"
+    # elif totals['text'] > 100:
+    #     t_label = f"{totals['text'] / 1_000:.1f} K"
+    # else:
+    #     t_label = f"{totals['text']}"
+    #
+    # if totals['pairs'] > 100_000:
+    #     p_label = f"{totals['pairs'] / 1_000_000:.1f} M"
+    # elif totals['pairs'] > 100:
+    #     p_label = f"{totals['pairs'] / 1_000:.1f} K"
+    # else:
+    #     p_label = f"{totals['pairs']}"
+    #
+    # latex += '\t\\hline\n'
+    # latex += '\t'
+    # latex += 'Total'
+    # latex += ' & '
+    # latex += f"{t_label}"
+    # latex += ' & '
+    # latex += f"{p_label}"
+    # latex += ' & '
+    # latex += ''
+    # latex += ' & '
+    # latex += f""
+    # latex += ' & '
+    # latex += f""
+    # latex += '\\\\ \n'
+    # latex += '\t\\hline\n'
+    #
+    # print(latex)
 
 
 def gen_twitter_table():

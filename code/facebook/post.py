@@ -56,6 +56,8 @@ class FBPost(Post):
         except FileNotFoundError:
             pass
 
+        self.auth = self.name
+
         # check for replies, if they're available
         try:
             for comment in json.load(open(filename + 'replies.json')):
