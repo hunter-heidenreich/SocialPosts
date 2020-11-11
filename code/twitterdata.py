@@ -44,6 +44,7 @@ class TwitterData(Dataset):
 
                     t = Tweet.from_json(tweet)
                     q = Tweet.from_json(quoted)
+                    q.name = 'quote'
                     q.add_comment(t)
 
                     out = TwitterThread(q.name, uid=q.uid)
@@ -63,7 +64,7 @@ class TwitterData(Dataset):
 
             ts, ps = [], []
             for pid, post in page.posts.items():
-                texts, pairs = post.extract_post_reply_pairs()
+                texts, pairs = post.extract_post_reply_pairs(source=True)
                 ts.extend(texts.values())
                 ps.extend(pairs.values())
 

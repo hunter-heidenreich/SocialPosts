@@ -1,3 +1,5 @@
+import json
+
 from collections import defaultdict
 from glob import glob
 
@@ -97,24 +99,68 @@ def facebook_data_stats():
     return stats, totals
 
 
+def format_num(num):
+    if num > 1_000_000:
+        return f"{num / 1_000_000:.1f} M"
+    elif num > 1_000:
+        return f"{num / 1_000:.1f} K"
+    else:
+        return f"{num}"
+
+
 def twitter_data_stats():
     stats = {}
+
+    authors = {
+        'source': defaultdict(set),
+        'voice': defaultdict(set)
+    }
     for f in tqdm(glob('data/twitter/*/')):
         page = f.split('/')[-2]
-        stats[page] = defaultdict(int)
+        if page != 'quote' and page not in stats:
+            stats[page] = defaultdict(int)
 
-        with open(f + 'text.json') as ff:
-            stats[page]['text'] += len(ff.readlines())
+        if page == 'quote':
+            with open(f + 'text.json') as ff:
+                lines = ff.readlines()
+                # stats[page]['text'] += len(lines)
 
-        with open(f + 'pairs.json') as ff:
-            stats[page]['pairs'] += len(ff.readlines())
+                for line in lines:
+                    dat = json.loads(line)
+
+                    if dat['originator'] not in stats:
+                        stats[dat['originator']] = defaultdict(int)
+
+                    stats[dat['originator']]['text'] += 1
+
+                    if dat['is_source']:
+                        authors['source'][dat['user']].add(dat['id'])
+                    else:
+                        stats[dat['originator']]['pairs'] += 1
+
+                    authors['voice'][dat['originator']].add(dat['user'])
+        else:
+            with open(f + 'text.json') as ff:
+                lines = ff.readlines()
+                stats[page]['text'] += len(lines)
+
+                for line in lines:
+                    dat = json.loads(line)
+
+                    if dat['is_source']:
+                        authors['source'][dat['user']].add(dat['id'])
+
+                    authors['voice'][page].add(dat['user'])
+
+            with open(f + 'pairs.json') as ff:
+                stats[page]['pairs'] += len(ff.readlines())
 
     totals = defaultdict(int)
     for vs in stats.values():
         for k, v in vs.items():
             totals[k] += v
 
-    return stats, totals
+    return stats, totals, authors
 
 
 def facebook_histogram():
@@ -228,72 +274,89 @@ def gen_facebook_table():
 
 
 def gen_twitter_table():
-    stats, totals = twitter_data_stats()
+    stats, totals, authors = twitter_data_stats()
 
     double = 5
 
     # filter step
-    thresh = 0.001
+    thresh = 0.005
     stats = {k: stats[k] for k in stats if stats[k]['text'] / totals['text'] > thresh}
 
     latex = ''
     latex += '\t\\hline\n'
 
+    total_srcs = set()
+    u_auths = set()
     for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
-        latex += '\t'
-        latex += k
-        latex += ' & '
+        key = str(k)
 
+        latex += '\t'
+        latex += k.replace('_', '\\_')
+
+        # Tally source tweets
+        latex += ' & '
+        latex += format_num(len(authors['source'][key]))
+        total_srcs |= authors['source'][key]
+
+        # Tally unique posts
+        latex += ' & '
         p = 100 * v['text'] / totals['text']
-        if v['text'] > 100_000:
-            label = f"{v['text'] / 1_000_000:.2f} M"
-        elif v['text'] > 100:
-            label = f"{v['text'] / 1_000:.2f} K"
-        else:
-            label = f"{v['text']}"
+        label = format_num(v['text'])
 
         if p > double:
             latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
         else:
             latex += f"{label} ({p:.2f}\\%)"
 
+        # Tally conversational pairs
         latex += ' & '
         p = 100 * v['pairs'] / totals['pairs']
-        if v['text'] > 100_000:
-            label = f"{v['pairs'] / 1_000_000:.2f} M"
-        elif v['text'] > 100:
-            label = f"{v['pairs'] / 1_000:.2f} K"
-        else:
-            label = f"{v['pairs']}"
+        label = format_num(v['pairs'])
 
         if p > double:
             latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
         else:
             latex += f"{label} ({p:.2f}\\%)"
 
-        latex += '\\\\ \n'
+        # Unique voices
+        latex += ' & '
+        latex += format_num(len(authors['voice'][key]))
+        u_auths |= authors['voice'][key]
 
-    if totals['text'] > 100_000:
-        t_label = f"{totals['text'] / 1_000_000:.2f} M"
-    elif totals['text'] > 100:
-        t_label = f"{totals['text'] / 1_000:.2f} K"
-    else:
-        t_label = f"{totals['text']}"
+        # Num space-separated tokens
+        # latex += ' & '
 
-    if totals['pairs'] > 100_000:
-        p_label = f"{totals['pairs'] / 1_000_000:.2f} M"
-    elif totals['pairs'] > 100:
-        p_label = f"{totals['pairs'] / 1_000:.2f} K"
-    else:
-        p_label = f"{totals['pairs']}"
+        # Num unique space-separated tokens
+        # latex += ' & '
+
+        latex += ' \\\\ \n'
 
     latex += '\t\\hline\n'
     latex += '\t'
     latex += 'Total'
+
+    # Tally source tweets
     latex += ' & '
-    latex += f"{t_label}"
+    latex += format_num(len(total_srcs))
+
+    # Tally unique posts
     latex += ' & '
-    latex += f"{p_label}"
+    latex += format_num(totals['text'])
+
+    # Tally conversational pairs
+    latex += ' & '
+    latex += format_num(totals['pairs'])
+
+    # Unique voices
+    latex += ' & '
+    latex += format_num(len(u_auths))
+
+    # Num space-separated tokens
+    # latex += ' & '
+
+    # Num unique space-separated tokens
+    # latex += ' & '
+
     latex += '\\\\ \n'
     latex += '\t\\hline\n'
 
@@ -302,8 +365,8 @@ def gen_twitter_table():
 
 if __name__ == '__main__':
     # facebook_data_stats()
-    # gen_facebook_table()
     # facebook_histogram()
 
+    # gen_twitter_table()
+    gen_facebook_table()
     # gen_chan_table()
-    gen_twitter_table()

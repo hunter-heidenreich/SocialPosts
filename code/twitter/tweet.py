@@ -32,6 +32,7 @@ class Tweet(Post):
         tid = data['id']
         name = data['user']['screen_name']
         t = Tweet(tid, name=name)
+        t.author = name
 
         t.created_at = data['created_at']
 

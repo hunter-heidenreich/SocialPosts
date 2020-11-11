@@ -17,6 +17,9 @@ class Post(ABC):
         # name identifier for page/domain
         self._name = name
 
+        # author
+        self._auth = None
+
         # datetime created
         self._created_at = None
 
@@ -43,6 +46,10 @@ class Post(ABC):
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, n):
+        self._name = n
+
     @property
     def pid(self):
         return self._pid
@@ -66,6 +73,14 @@ class Post(ABC):
     @property
     def comments(self):
         return self._comments
+
+    @property
+    def author(self):
+        return self._auth
+
+    @author.setter
+    def author(self, auth):
+        self._auth = auth
 
     def merge_copies(self, other):
         import pdb
@@ -131,7 +146,7 @@ class Post(ABC):
 
         return direct, nested
 
-    def extract_post_reply_pairs(self, text=None, pairs=None):
+    def extract_post_reply_pairs(self, text=None, pairs=None, source=False, originator=None):
         """
         Extracts the unique post text and paired post-replies
         starting with this post as a source
@@ -142,11 +157,14 @@ class Post(ABC):
         if not pairs:
             pairs = {}
 
-        text[self.uid] = {'id': self.uid, 'text': self.text}
+        if not originator and source:
+            originator = self.author
+
+        text[self.uid] = {'id': self.uid, 'text': self.text, 'user': self.author, 'is_source': source, 'originator': originator}
         for cid in self.comments:
             pairs[(self.uid, cid)] = {'post': self.uid, 'reply': cid}
             if cid not in text:
-                text, pairs = self.comments[cid].extract_post_reply_pairs(text=text, pairs=pairs)
+                text, pairs = self.comments[cid].extract_post_reply_pairs(text=text, pairs=pairs, originator=originator)
 
         return text, pairs
 
