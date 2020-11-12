@@ -39,9 +39,9 @@ class RedditData(Dataset):
 
             ts, ps = [], []
             for pid, post in tqdm(page.posts.items()):
-                texts, pairs = post.extract_post_reply_pairs()
-                ts.extend(texts)
-                ps.extend(pairs)
+                texts, pairs = post.extract_post_reply_pairs(source=True)
+                ts.extend(texts.values())
+                ps.extend(pairs.values())
 
                 total_pairs += len(pairs)
                 total_posts += len(texts)
@@ -61,6 +61,6 @@ class RedditData(Dataset):
 if __name__ == '__main__':
     data = RedditData()
     data.load()
-    data.stat()
+    # data.stat()
     data.write_post_replies()
 

@@ -51,6 +51,8 @@ class RedditPost(Post):
         result.meta['body'] = str(data.get('body', ''))
         result.meta['author_name'] = str(data.get('author_name', ''))
 
+        result.author = result.meta['author_name']
+
         # int
         result.meta['controversiality'] = int(data.get('controversiality', 0))
         result.meta['gilded'] = int(data.get('gilded', 0))
