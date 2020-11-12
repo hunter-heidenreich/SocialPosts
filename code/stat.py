@@ -5,10 +5,6 @@ from glob import glob
 
 from tqdm import tqdm
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-
 
 def format_num(num):
     """
@@ -103,6 +99,34 @@ def facebook_data_stats():
             totals[k] += v
 
     return stats, totals, srcs
+
+
+def reddit_data_stats():
+    stats = {}
+    vox = defaultdict(set)
+
+    for f in tqdm(glob('data/reddit/*/')):
+        page = f.split('/')[-2]
+        stats[page] = defaultdict(int)
+
+        with open(f + 'text.json') as ff:
+            lines = ff.readlines()
+            stats[page]['text'] += len(lines)
+
+            for line in lines:
+                dat = json.loads(line)
+                vox[page].add(dat['user'])
+                stats[page]['srcs'] += 1 if dat['is_source'] else 0
+
+        with open(f + 'pairs.json') as ff:
+            stats[page]['pairs'] += len(ff.readlines())
+
+    totals = defaultdict(int)
+    for vs in stats.values():
+        for k, v in vs.items():
+            totals[k] += v
+
+    return stats, totals, vox
 
 
 def chan_data_stats():
@@ -283,6 +307,81 @@ def gen_facebook_table():
     print(latex)
 
 
+def gen_reddit_table():
+    stats, totals, vox = reddit_data_stats()
+
+    # filter step
+    thresh = 0.0
+    double = 5
+    stats = {k: stats[k] for k in stats if stats[k]['text'] / totals['text'] > thresh}
+
+    latex = ''
+    latex += '\t\\hline\n'
+
+    vox_cnt = set()
+    for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+        key = str(k)
+
+        latex += '\t'
+        latex += k
+
+        # Tally source tweets
+        latex += ' & '
+        latex += format_num(v['srcs'])
+
+        # Tally unique posts
+        latex += ' & '
+        p = 100 * v['text'] / totals['text']
+        label = format_num(v['text'])
+
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        # Tally conversational pairs
+        latex += ' & '
+        p = 100 * v['pairs'] / totals['pairs']
+        label = format_num(v['pairs'])
+
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        # Unique voices
+        latex += ' & '
+        latex += f'{format_num(len(vox[key]))}'
+        vox_cnt |= vox[key]
+
+        latex += ' \\\\ \n'
+
+    latex += '\t\\hline\n'
+    latex += '\t'
+    latex += 'Total'
+
+    # Tally source tweets
+    latex += ' & '
+    latex += format_num(totals['srcs'])
+
+    # Tally unique posts
+    latex += ' & '
+    latex += format_num(totals['text'])
+
+    # Tally conversational pairs
+    latex += ' & '
+    latex += format_num(totals['pairs'])
+
+    # Unique voices
+    latex += ' & '
+    latex += f'{format_num(len(vox_cnt))}'
+
+    latex += '\\\\ \n'
+    latex += '\t\\hline\n'
+
+    print(latex)
+
+
 def gen_chan_table():
     stats, totals, vox = chan_data_stats()
 
@@ -361,4 +460,5 @@ def gen_chan_table():
 if __name__ == '__main__':
     # gen_twitter_table()
     # gen_facebook_table()
-    gen_chan_table()
+    gen_reddit_table()
+    # gen_chan_table()
