@@ -33,7 +33,7 @@ class ChanData(Dataset):
 
             ts, ps = [], []
             for pid, post in tqdm(page.posts.items()):
-                texts, pairs = post.extract_post_reply_pairs()
+                texts, pairs = post.extract_post_reply_pairs(source=True)
                 ts.extend(texts.values())
                 ps.extend(pairs.values())
 
@@ -54,8 +54,8 @@ class ChanData(Dataset):
 
 if __name__ == '__main__':
     # board = 'news'
-    # board = 'his'
     # board = 'sci'
+    # board = 'his'
     # board = 'x'
     # board = 'g'
     board = 'pol'
@@ -63,6 +63,6 @@ if __name__ == '__main__':
     for ix in tqdm(range(100)):
         data = ChanData()
         data.load(i=ix, board=board)
-        data.stat()
+        # data.stat()
         data.write_post_replies()
 

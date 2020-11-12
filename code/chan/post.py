@@ -60,6 +60,8 @@ class ChanPost(Post):
         prop = 'com'
         self.meta[prop] = raw_thread.get(prop, '')
 
+        self.author = raw_thread.get('name', 'Anonymous')
+
         text = (self.meta['sub'] + ' ' + self.meta['com']).strip()
         text = text.replace('<br>', '\n')
         text = text.replace('<br/>', '\n')

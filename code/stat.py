@@ -12,12 +12,20 @@ import pandas as pd
 
 def chan_data_stats():
     stats = {}
+    vox = defaultdict(set)
+
     for f in tqdm(glob('data/4chan/*/')):
         page = f.split('/')[-2]
         stats[page] = defaultdict(int)
 
         with open(f + 'text.json') as ff:
-            stats[page]['text'] += len(ff.readlines())
+            lines = ff.readlines()
+            stats[page]['text'] += len(lines)
+
+            for line in lines:
+                dat = json.loads(line)
+                vox[page].add(dat['user'])
+                stats[page]['srcs'] += 1 if dat['is_source'] else 0
 
         with open(f + 'pairs.json') as ff:
             stats[page]['pairs'] += len(ff.readlines())
@@ -27,56 +35,140 @@ def chan_data_stats():
         for k, v in vs.items():
             totals[k] += v
 
-    return stats, totals
+    return stats, totals, vox
 
 
 def gen_chan_table():
-    stats, totals = chan_data_stats()
-    scale = 1_000_000
+    stats, totals, vox = chan_data_stats()
 
-    uniform = 100 / len(stats)
-    mult = 4
-    double = mult * uniform
-    half = uniform / mult
+    # filter step
+    thresh = 0.0
+    double = 5
+    stats = {k: stats[k] for k in stats if stats[k]['text'] / totals['text'] > thresh}
 
     latex = ''
     latex += '\t\\hline\n'
 
+    vox_lower = set()
     for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+        key = str(k)
+
         latex += '\t'
-        latex += k.replace('_', ' ').replace('%', '\\%')
+        latex += k  # .replace('_', ' ').replace('%', '\\%')
+
+        # Tally source tweets
         latex += ' & '
+        latex += format_num(v['srcs'])
 
+        # Tally unique posts
+        latex += ' & '
         p = 100 * v['text'] / totals['text']
-        if p > double:
-            latex += '\\textbf{' + f"{v['text']/scale:.1f} M ({p:.2f}\\%)" + '}'
-        elif p < half:
-            latex += '\\underline{' + f"{v['text'] / scale:.1f} M ({p:.2f}\\%)" + '}'
-        else:
-            latex += f"{v['text']/scale:.1f} M ({p:.2f}\\%)"
+        label = format_num(v['text'])
 
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        # Tally conversational pairs
         latex += ' & '
         p = 100 * v['pairs'] / totals['pairs']
-        if p > double:
-            latex += '\\textbf{' + f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)" + '}'
-        elif p < half:
-            latex += '\\underline{' + f"{v['pairs'] / scale:.1f} M ({p:.2f}\\%)" + '}'
-        else:
-            latex += f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)"
+        label = format_num(v['pairs'])
 
-        latex += '\\\\ \n'
+        if p > double:
+            latex += '\\textbf{' + f"{label} ({p:.2f}\\%)" + '}'
+        else:
+            latex += f"{label} ({p:.2f}\\%)"
+
+        # Unique voices
+        latex += ' & '
+        latex += f'$\\Omega$({format_num(len(vox[key]))})'
+        vox_lower |= vox[key]
+
+        # Num space-separated tokens
+        # latex += ' & '
+
+        # Num unique space-separated tokens
+        # latex += ' & '
+
+        latex += ' \\\\ \n'
 
     latex += '\t\\hline\n'
     latex += '\t'
     latex += 'Total'
+
+    # Tally source tweets
     latex += ' & '
-    latex += f"{totals['text']/scale:.1f}"
+    latex += format_num(totals['srcs'])
+
+    # Tally unique posts
     latex += ' & '
-    latex += f"{totals['pairs']/scale:.1f}"
+    latex += format_num(totals['text'])
+
+    # Tally conversational pairs
+    latex += ' & '
+    latex += format_num(totals['pairs'])
+
+    # Unique voices
+    latex += ' & '
+    latex += f'$\\Omega$({format_num(len(vox_lower))})'
+
+    # Num space-separated tokens
+    # latex += ' & '
+
+    # Num unique space-separated tokens
+    # latex += ' & '
+
     latex += '\\\\ \n'
     latex += '\t\\hline\n'
 
     print(latex)
+
+    # scale = 1_000_000
+    #
+    # uniform = 100 / len(stats)
+    # mult = 4
+    # double = mult * uniform
+    # half = uniform / mult
+    #
+    # latex = ''
+    # latex += '\t\\hline\n'
+    #
+    # for ix, (k, v) in enumerate(sorted(stats.items(), key=lambda ks: ks[0])):
+    #     latex += '\t'
+    #     latex += k.replace('_', ' ').replace('%', '\\%')
+    #     latex += ' & '
+    #
+    #     p = 100 * v['text'] / totals['text']
+    #     if p > double:
+    #         latex += '\\textbf{' + f"{v['text']/scale:.1f} M ({p:.2f}\\%)" + '}'
+    #     elif p < half:
+    #         latex += '\\underline{' + f"{v['text'] / scale:.1f} M ({p:.2f}\\%)" + '}'
+    #     else:
+    #         latex += f"{v['text']/scale:.1f} M ({p:.2f}\\%)"
+    #
+    #     latex += ' & '
+    #     p = 100 * v['pairs'] / totals['pairs']
+    #     if p > double:
+    #         latex += '\\textbf{' + f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)" + '}'
+    #     elif p < half:
+    #         latex += '\\underline{' + f"{v['pairs'] / scale:.1f} M ({p:.2f}\\%)" + '}'
+    #     else:
+    #         latex += f"{v['pairs']/scale:.1f} M ({p:.2f}\\%)"
+    #
+    #     latex += '\\\\ \n'
+    #
+    # latex += '\t\\hline\n'
+    # latex += '\t'
+    # latex += 'Total'
+    # latex += ' & '
+    # latex += f"{totals['text']/scale:.1f}"
+    # latex += ' & '
+    # latex += f"{totals['pairs']/scale:.1f}"
+    # latex += '\\\\ \n'
+    # latex += '\t\\hline\n'
+    #
+    # print(latex)
 
 
 def facebook_data_stats():
@@ -457,5 +549,5 @@ if __name__ == '__main__':
     # facebook_histogram()
 
     # gen_twitter_table()
-    gen_facebook_table()
-    # gen_chan_table()
+    # gen_facebook_table()
+    gen_chan_table()
