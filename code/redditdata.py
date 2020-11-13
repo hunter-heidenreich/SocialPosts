@@ -8,6 +8,8 @@ from base.dataset import Dataset
 from reddit.subreddit import SubReddit
 from reddit.post import RedditPost
 
+from datasets import load_dataset
+
 
 class RedditData(Dataset):
 
@@ -26,6 +28,26 @@ class RedditData(Dataset):
             sub.posts[root.__hash__()] = root
 
         self._data[sid] = sub
+
+    def load_eli5(self):
+        ds = load_dataset('eli5')
+
+        for split, data in ds.items():
+            print(split)
+            sid = split.split('_')[-1]
+            if sid not in self._data:
+                self._data[sid] = SubReddit(f'r/{sid}')
+
+            for x in tqdm(data):
+                post = RedditPost(x['q_id'])
+                post.text = (x['title'] + ' ' + x['selftext']).strip()
+
+                for (a, t) in zip(x['answers']['a_id'], x['answers']['text']):
+                    r = RedditPost(a)
+                    r.text = t
+                    post.add_comment(r)
+
+                self._data[sid].posts[post.__hash__()] = post
 
     def write_post_replies(self):
         total_pairs = 0
@@ -60,7 +82,11 @@ class RedditData(Dataset):
 
 if __name__ == '__main__':
     data = RedditData()
-    data.load()
+
+    # data.load()
+    data.load_eli5()
+
     # data.stat()
+
     data.write_post_replies()
 

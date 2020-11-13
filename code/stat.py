@@ -1,6 +1,7 @@
+import re
 import json
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 from glob import glob
 
 from tqdm import tqdm
@@ -11,7 +12,11 @@ def format_num(num):
     Transforms an integer into a smaller
     symbol representation
     """
-    if num > 1_000_000:
+    if num > 1_000_000_000_000:
+        return f"{num / 1_000_000:.1f} T"
+    elif num > 1_000_000_000:
+        return f"{num / 1_000_000:.1f} B"
+    elif num > 1_000_000:
         return f"{num / 1_000_000:.1f} M"
     elif num > 1_000:
         return f"{num / 1_000:.1f} K"
@@ -457,8 +462,65 @@ def gen_chan_table():
     print(latex)
 
 
+def token_cnt(plat):
+    key = {
+        'Facebook': 'fb',
+        'Twitter': 'twitter',
+        '4Chan': '4chan',
+        'Reddit': 'reddit'
+    }[plat]
+
+    tokens = Counter()
+    # for f in tqdm(glob(f'data/{key}/*/text.json')):
+    for f in glob(f'data/{key}/*/text.json'):
+        print(f)
+        with open(f) as fp:
+            for line in tqdm(fp.readlines()):
+                tokens.update(re.split('\s+', json.loads(line)['text']))
+
+    print(f'{plat} & {format_num(sum(tokens.values()))} & {format_num(len(tokens.keys()))} \\\\')
+
+
+def chan_anon_table():
+    anon = defaultdict(int)
+    cnt = defaultdict(int)
+
+    tot_anon = 0
+    tot_cnt = 0
+    for f in glob('data/4chan/*/'):
+        page = f.split('/')[-2]
+        print(page)
+        with open(f + 'text.json') as ff:
+            for line in tqdm(ff.readlines()):
+                dat = json.loads(line)
+                if dat['user'] == 'Anonymous':
+                    anon[page] += 1
+                    tot_anon += 1
+
+                cnt[page] += 1
+                tot_cnt += 1
+
+    print('\\hline')
+    for page in sorted(cnt.keys()):
+
+        rat = anon[page] / cnt[page]
+        print(f'{page} & {100 * rat:.2f}\\% & {100 * (1-rat):.2f}\\% \\\\')
+
+    print('\\hline')
+    rat = tot_anon / tot_cnt
+    print(f'Total & {100 * rat:.2f}\\% & {100 * (1 - rat):.2f}\\% \\\\')
+    print('\\hline')
+
+
 if __name__ == '__main__':
     # gen_twitter_table()
     # gen_facebook_table()
-    gen_reddit_table()
+    # gen_reddit_table()
     # gen_chan_table()
+
+    # token_cnt('Twitter')
+    # token_cnt('Facebook')
+    token_cnt('Reddit')
+    # token_cnt('4Chan')
+
+    # chan_anon_table()
