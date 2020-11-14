@@ -18,11 +18,21 @@ class SocialTokenizer:
         return self.sp.decode(pieces)
 
     @staticmethod
-    def init_training(source_dir='data/'):
-        with open(source_dir + 'raw_sents.txt', 'w+') as ff:
+    def init_training(source_dir='data/', outname='raw_sents,txt', restrictions=None):
+        with open(source_dir + outname, 'w+') as ff:
 
             # iterate over sub-directories
-            for f in glob(source_dir + '*/*/text.json'):
+            for f in glob(source_dir + '*/*/text_en.json'):
+                plat = f.split('/')[-3]
+                if not restrictions:
+                    pass
+                else:
+                    check = False
+                    for r in restrictions:
+                        check = check or (r in plat)
+                    if not check:
+                        continue
+
                 print(f)
                 with open(f) as inp:
                     lines = inp.readlines()
@@ -52,5 +62,8 @@ class SocialTokenizer:
 if __name__ == '__main__':
     # tokenizer = SocialTokenizer('sp_model.model')
 
-    # SocialTokenizer.init_training()
-    SocialTokenizer.train(model_prefix='sp2')
+    raw_sents = '4chan_sents.txt'
+    doms = {'4chan'}
+
+    SocialTokenizer.init_training(outname=raw_sents, restrictions=doms)
+    # SocialTokenizer.train(model_prefix='sp2')

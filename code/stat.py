@@ -13,9 +13,9 @@ def format_num(num):
     symbol representation
     """
     if num > 1_000_000_000_000:
-        return f"{num / 1_000_000:.1f} T"
+        return f"{num / 1_000_000_000_000:.1f} T"
     elif num > 1_000_000_000:
-        return f"{num / 1_000_000:.1f} B"
+        return f"{num / 1_000_000_000:.1f} B"
     elif num > 1_000_000:
         return f"{num / 1_000_000:.1f} M"
     elif num > 1_000:
@@ -37,7 +37,7 @@ def twitter_data_stats():
             stats[page] = defaultdict(int)
 
         if page == 'quote':
-            with open(f + 'text.json') as ff:
+            with open(f + 'text_en.json') as ff:
                 lines = ff.readlines()
                 # stats[page]['text'] += len(lines)
 
@@ -56,7 +56,7 @@ def twitter_data_stats():
 
                     authors['voice'][dat['originator']].add(dat['user'])
         else:
-            with open(f + 'text.json') as ff:
+            with open(f + 'text_en.json') as ff:
                 lines = ff.readlines()
                 stats[page]['text'] += len(lines)
 
@@ -68,8 +68,8 @@ def twitter_data_stats():
 
                     authors['voice'][page].add(dat['user'])
 
-            with open(f + 'pairs.json') as ff:
-                stats[page]['pairs'] += len(ff.readlines())
+            with open(f + 'pairs_en.json') as ff:
+                stats[page]['pairs'] += len([line for line in ff.readlines() if line.strip()])
 
     totals = defaultdict(int)
     for vs in stats.values():
@@ -86,7 +86,7 @@ def facebook_data_stats():
         page = f.split('/')[-2]
         stats[page] = defaultdict(int)
 
-        with open(f + 'text.json') as ff:
+        with open(f + 'text_en.json') as ff:
             lines = ff.readlines()
             stats[page]['text'] += len(lines)
 
@@ -95,8 +95,8 @@ def facebook_data_stats():
                 if dat['is_source']:
                     srcs[page] += 1
 
-        with open(f + 'pairs.json') as ff:
-            stats[page]['pairs'] += len(ff.readlines())
+        with open(f + 'pairs_en.json') as ff:
+            stats[page]['pairs'] += len([line for line in ff.readlines() if line.strip()])
 
     totals = defaultdict(int)
     for vs in stats.values():
@@ -114,7 +114,7 @@ def reddit_data_stats():
         page = f.split('/')[-2]
         stats[page] = defaultdict(int)
 
-        with open(f + 'text.json') as ff:
+        with open(f + 'text_en.json') as ff:
             lines = ff.readlines()
             stats[page]['text'] += len(lines)
 
@@ -123,7 +123,7 @@ def reddit_data_stats():
                 vox[page].add(dat['user'])
                 stats[page]['srcs'] += 1 if dat['is_source'] else 0
 
-        with open(f + 'pairs.json') as ff:
+        with open(f + 'pairs_en.json') as ff:
             stats[page]['pairs'] += len(ff.readlines())
 
     totals = defaultdict(int)
@@ -142,7 +142,7 @@ def chan_data_stats():
         page = f.split('/')[-2]
         stats[page] = defaultdict(int)
 
-        with open(f + 'text.json') as ff:
+        with open(f + 'text_en.json') as ff:
             lines = ff.readlines()
             stats[page]['text'] += len(lines)
 
@@ -151,7 +151,7 @@ def chan_data_stats():
                 vox[page].add(dat['user'])
                 stats[page]['srcs'] += 1 if dat['is_source'] else 0
 
-        with open(f + 'pairs.json') as ff:
+        with open(f + 'pairs_en.json') as ff:
             stats[page]['pairs'] += len(ff.readlines())
 
     totals = defaultdict(int)
@@ -472,7 +472,7 @@ def token_cnt(plat):
 
     tokens = Counter()
     # for f in tqdm(glob(f'data/{key}/*/text.json')):
-    for f in glob(f'data/{key}/*/text.json'):
+    for f in glob(f'data/{key}/*/text_en.json'):
         print(f)
         with open(f) as fp:
             for line in tqdm(fp.readlines()):
@@ -490,7 +490,7 @@ def chan_anon_table():
     for f in glob('data/4chan/*/'):
         page = f.split('/')[-2]
         print(page)
-        with open(f + 'text.json') as ff:
+        with open(f + 'text_en.json') as ff:
             for line in tqdm(ff.readlines()):
                 dat = json.loads(line)
                 if dat['user'] == 'Anonymous':
@@ -516,11 +516,11 @@ if __name__ == '__main__':
     # gen_twitter_table()
     # gen_facebook_table()
     # gen_reddit_table()
-    # gen_chan_table()
+    gen_chan_table()
 
     # token_cnt('Twitter')
     # token_cnt('Facebook')
-    token_cnt('Reddit')
-    # token_cnt('4Chan')
+    # token_cnt('Reddit')
+    token_cnt('4Chan')
 
-    # chan_anon_table()
+    chan_anon_table()
