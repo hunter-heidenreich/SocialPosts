@@ -5,16 +5,12 @@ from tqdm import tqdm
 
 import gcld3
 
-# from langdetect import detect_langs, DetectorFactory
-# from langdetect.lang_detect_exception import LangDetectException
-#
-# import spacy
-# from spacy_langdetect import LanguageDetector
-
-
 if __name__ == '__main__':
     t_lang = 'en'
-    platform = '4chan'
+
+    # platform = 'twitter'
+    # platform = 'fb'
+    platform = 'reddit'
 
     detector = gcld3.NNetLanguageIdentifier(min_num_bytes=0, max_num_bytes=1000)
 
