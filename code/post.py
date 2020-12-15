@@ -200,10 +200,10 @@ class Tweet(UniversalPost):
     def _string_to_creation(self, timestr):
         self.created_at = datetime.strptime(timestr, '%a %b %d %H:%M:%S +0000 %Y')
 
-    def get_names(self):
+    def get_mentions(self):
         names = re.findall(r'@([^\s:]+)', self.text)
 
-        return super(Tweet, self).get_names() | set(names)
+        return super(Tweet, self).get_mentions() | set(names)
 
     def redact(self, name_map):
         for name in re.findall(r'@([^\s:]+)', self.text):
@@ -251,10 +251,10 @@ class RedditPost(UniversalPost):
     def _string_to_creation(self, x):
         self.created_at = datetime.fromtimestamp(float(x))
 
-    def get_names(self):
+    def get_mentions(self):
         names = re.findall(r'/?u/([A-Za-z0-9_-]+)', self.text)
 
-        return super(RedditPost, self).get_names() | set(names)
+        return super(RedditPost, self).get_mentions() | set(names)
 
     def redact(self, name_map):
         for k, v in name_map.items():
