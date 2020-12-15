@@ -22,7 +22,9 @@ from utils import display_num
 
 class ConversationalDataset(Dataset):
 
-    DATA_ROOT = '/Users/hsh28/data/'
+    # DATA_ROOT = '/Users/hsh28/data/'
+    # DATA_ROOT = 'data/'
+    DATA_ROOT = '/local-data/socialtransformer/'
 
     def __init__(self):
         self._boards = {}
@@ -537,28 +539,39 @@ class RedditExtractor(ConversationalDataset):
         super(RedditExtractor, self).load()
 
         thresh = 180 + 20  # dump posts older that 180 days (thus archived)
-        jobs = mp.cpu_count()
+        # jobs = mp.cpu_count() // 4
 
         # assure correct format and gather board names
         board_names = set()
 
-        pool = mp.Pool(processes=jobs)
+        # pool = mp.Pool(processes=jobs)
 
-        print(f'Created pool with {jobs} workers')
+        # print(f'Created pool with {jobs} workers')
 
         months = glob(f'{self.DATA_ROOT}DialoGPTdata/*/')
 
-        for names in tqdm(pool.imap_unordered(func=SubReddit.preprocess_extract,
-                                              iterable=months), total=len(months)):
+        # for names in tqdm(pool.imap_unordered(func=SubReddit.preprocess_extract,
+        #                                       iterable=months), total=len(months)):
+        for month in tqdm(sorted(months)):
+            print(month)
+            names = SubReddit.preprocess_extract(month)
             board_names |= names
 
         print(f'Found {len(board_names)} boards')
 
-        import pdb
-        pdb.set_trace()
-
         for bid in board_names:
-            pass
+            print(f'Loading board: {bid}')
+            board = SubReddit(bid)
+            for f in tqdm(sorted(glob(f'{self.DATA_ROOT}DialoGPTdata/*/{bid}.json'))):
+                with open(f) as fp:
+                    for line in fp.readlines():
+                        post = RedditPost(post_id=0)
+                        post.from_json(json.loads(line))
+                        board.add_post(post)
+            
+            self._boards[bid] = board
+            self.dump_conversation(filepath='Reddit/RD')
+            del self._boards[bid]
 
             # for bid, board in SubReddit.preprocess_extract(f).items():
             #     if bid in self._boards:

@@ -805,7 +805,7 @@ class SubReddit(Board):
                     tag = SubReddit.TAG_COMMENT
                     reply_to = True
 
-                for line in lines:
+                for line in tqdm(lines):
                     post = {k: v for k, v in zip(fields, line.split('\t'))}
                     try:
                         name = post['subreddit'].strip()
