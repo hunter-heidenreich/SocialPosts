@@ -8,7 +8,15 @@ from datetime import datetime
 
 class UniversalPost(ABC):
 
-    def __init__(self, post_id, text='', author=None, created_at=None, board_id=None, reply_to=None, root_id=None, platform=None, lang=None):
+    """
+    The Universal Post class.
+
+    This is designed to be the abstract, baseline object
+    that all social media posts inherit from.
+    The only mandatory field is the post_id.
+    """
+
+    def __init__(self, post_id, text='', author=None, created_at=None, board_id=None, reply_to=None, platform=None, lang=None):
         # a unique identifier
         self._post_id = post_id
 
@@ -27,9 +35,6 @@ class UniversalPost(ABC):
         # collection of IDs this post was generated in reply to
         self._reply_to = set() if not reply_to else set(reply_to)
 
-        # the root of this post's discussion DAG (None if it is the originator)
-        self._root_id = root_id
-
         # platform name
         self._platform = platform
 
@@ -40,7 +45,10 @@ class UniversalPost(ABC):
         return self._post_id
 
     def __repr__(self):
-        return f'UniveralPost<{self.platform}/{self.board}/{self._post_id}/{self.author}/{self.created_at}::{self.text[:40]}>'
+        if self.board:
+            return f'UniveralPost<{self.platform}/{self.board}/{self._post_id}/{self.author}/{self.created_at}::{self.text[:50]}>'
+        else:
+            return f'UniveralPost<{self.platform}/{self._post_id}/{self.author}/{self.created_at}::{self.text[:50]}>'
 
     @property
     def post_id(self):
@@ -77,6 +85,11 @@ class UniversalPost(ABC):
 
     @abstractmethod
     def _string_to_creation(self, x):
+        """
+        A function for pre-processing a platform's time strings
+        to a proper datetime object.
+        Will be specified downstream.
+        """
         pass
 
     @property
@@ -102,14 +115,6 @@ class UniversalPost(ABC):
         self._board_id = bid
 
     @property
-    def root(self):
-        return self._root_id
-
-    @root.setter
-    def root(self, rid):
-        self._root_id = rid
-
-    @property
     def platform(self):
         return self._platform
 
@@ -126,6 +131,10 @@ class UniversalPost(ABC):
         self._lang = lang
 
     def from_json(self, data):
+        """
+        Given an exported JSON object for a Universal Post,
+        this function loads the saved data into its fields
+        """
         self._post_id = data['post_id']
         self.text = data['text']
         self.author = data['author']
@@ -135,10 +144,13 @@ class UniversalPost(ABC):
             self.add_reply_to(pid)
 
         self.board = data['board_id']
-        self.root = data['root_id']
         self.platform = data['platform']
 
     def to_json(self):
+        """
+        Function for exporting a Universal Post
+        into a JSON object for storage and later use
+        """
         return {
             'post_id': self._post_id,
             'text': self.text,
@@ -146,38 +158,35 @@ class UniversalPost(ABC):
             'created_at': self.created_at.timestamp() if self.created_at else None,
             'reply_to': list(self.reply_to),
             'board_id': self.board,
-            'root_id': self.root,
             'platform': self.platform
         }
 
-    def conversational_stats(self):
-        return {
-            'posts': 1,
-            'voices': {self.author} if self.author else set()
-        }
-
-    def token_stats(self):
-        tokens = re.split('\s+', self.text)
-        normal = set(tokens)
-        lower = {n.lower() for n in normal}
-        return {
-            'unique': normal,
-            'unique_lower': lower,
-            'tokens': len(tokens)
-        }
-
-    def get_names(self):
+    def get_mentions(self):
+        """
+        By default, this will simply return the author
+        of the post (if available)
+        for appropriate anonymization, down-playtform
+        """
         if self.author:
             return {self.author}
 
         return set()
 
-    def redact(self, name_map):
-        for name, pseudo in name_map.items():
-            self.text = re.sub(name, pseudo, self.text)
+    def redact(self, redact_map):
+        """
+        Given a set of terms,
+        this function will properly redact
+        all instances of those terms.
 
-        if self.author in name_map:
-            self.author = name_map[self.author]
+        This function is mainly to use for redacting usernames
+        or user mentions, so as to protect users
+        """
+        for term, replacement in redact_map.items():
+            self.text = re.sub(term, replacement, self.text)
+
+        # for in-build anonymization, this will convert to an appropriate username
+        if self.author in redact_map:
+            self.author = redact_map[self.author]
 
 
 class Tweet(UniversalPost):

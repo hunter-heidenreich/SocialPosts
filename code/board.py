@@ -9,8 +9,6 @@ from glob import glob
 from tqdm import tqdm
 from collections import defaultdict
 
-from datasets import load_dataset
-
 from post import Tweet, FBPost, RedditPost, ChanPost
 
 import gcld3

@@ -698,11 +698,11 @@ if __name__ == '__main__':
     # cmv.latex_table(sel='token')
     # cmv.latex_table(sel='graph')
 
-    dialog = RedditExtractor()
+    # dialog = RedditExtractor()
     # dialog.batch_chunk('Reddit/RD/*/', 'data/batched/', SubReddit, RedditPost, batch_load=True)
 
     # complete raw rebuild
-    dialog.load_batch('Reddit/RD')
+    # dialog.load_batch('Reddit/RD')
 
     # dialog.load()
     # dialog.cache()
@@ -721,10 +721,10 @@ if __name__ == '__main__':
 
     # 4chan
 
-    # chan = Chan()
-    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='news*', label='conversational')
-    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='news*', label='token')
-    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='news*', label='topological')
+    chan = Chan()
+    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='conversational')
+    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='token')
+    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='topological')
 
     # chan.batch_load()
     # chan.load()  # loads the raw form
