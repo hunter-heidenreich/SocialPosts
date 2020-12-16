@@ -66,7 +66,7 @@ class Board:
 
         self._conversations = {
             convo_id: [self.posts[pid].to_json() for pid in pids]
-            for convo_id, pids in self._convo_id_to_pids.items()
+            for convo_id, pids in tqdm(self._convo_id_to_pids.items())
             if len(pids) >= min_path_len
         }
 

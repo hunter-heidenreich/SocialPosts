@@ -3,46 +3,50 @@ import re
 import json
 import random
 
-import multiprocessing as mp
 import pandas as pd
 import numpy as np
 import networkx as nx
 
 from datetime import datetime
-from collections import defaultdict
 from tqdm import tqdm
 from glob import glob
 
-from torch.utils.data import Dataset
 
 from post import Tweet, RedditPost, FBPost, ChanPost
 from board import TwitterUser, FBPage, SubReddit, ChanBoard
 from utils import display_num
 
 
-class ConversationalDataset(Dataset):
+class ConversationalDataset:
+
+    """
+    An interface for a conversational, social media dataset
+    """
 
     # DATA_ROOT = '/Users/hsh28/data/'
-    # DATA_ROOT = 'data/'
     DATA_ROOT = '/local-data/socialtransformer/'
+
+    # # of posts in a conversation chunk
+    CONVO_SIZE = 1e6
 
     def __init__(self):
         self._boards = {}
-        self._ids = []
-
-    def load(self):
-        self._ids = list(self._boards.keys())
 
     def dump_conversation(self, filepath, board_suffix=''):
+        """
+        Given a chunk of boards, this function iterates through the boards,
+        builds their conversations,
+        and writes smaller, more manageable conversational chunks
+        """
         for bid, board in self._boards.items():
+            os.makedirs(self.DATA_ROOT + 'conversations/' + filepath, exist_ok=True)
+
             print(f'Building board: {bid}')
             board.construct_conversations()
 
-            os.makedirs(self.DATA_ROOT + 'conversations/' + filepath, exist_ok=True)
-
             print(f'Extracting conversations')
             convos = board.conversations
-            print(f'Found {display_num(len(convos))} conversations')
+            print(f'Found {display_num(len(board.posts))} posts, {display_num(len(convos))} conversations')
 
             batch = 0
             cur = 0
@@ -54,13 +58,13 @@ class ConversationalDataset(Dataset):
                 }) + '\n')
 
                 cur += len(posts)
-                if cur > Chan.CONVO_SIZE:
+                if cur > ConversationalDataset.CONVO_SIZE:
                     path = self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}_{board_suffix:04d}.json' \
                         if type(board_suffix) == int \
                         else self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}{board_suffix}_{batch:04d}.json'
                     with open(path, 'w+') as fp:
                         fp.writelines(lines)
-                    print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
+                    # print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
                     batch += 1
                     cur = 0
                     lines = []
@@ -71,9 +75,14 @@ class ConversationalDataset(Dataset):
                     else self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}{board_suffix}_{batch:04d}.json'
                 with open(path, 'w+') as fp:
                     fp.writelines(lines)
-                print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
+                # print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
+
+            print(f'Wrote {batch+1} conversational chunks')
 
     def load_conversation(self, filepath, board_cons, post_cons, filepattern='*',):
+        """
+        Loads a chunk of cached conversational objects
+        """
         for f in glob(self.DATA_ROOT + 'conversations/' + filepath + f'/{filepattern}.json'):
             bid = f.split('/')[-1].split('_')[0]
             board = self._boards.get(bid, board_cons(bid))
@@ -88,9 +97,15 @@ class ConversationalDataset(Dataset):
             self._boards[bid] = board
 
         for bid, board in self._boards.items():
-            print(f'Loaded board: {bid} ({display_num(len(board.posts))} posts, {display_num(len(board._convo_id_to_pids))} conversations)')
+            print(f'Loaded board: {bid} ({display_num(len(board.posts))} posts, {display_num(len(board.conversations))} conversations)')
 
     def conversation_iterator(self, filepath, board_cons, post_cons, filepattern='*'):
+        """
+        Produces an iterator that will iterate over
+        cached conversational data,
+        at a lower memory foot print than loading
+        all data into memory directly
+        """
         for f in tqdm(sorted(glob(self.DATA_ROOT + 'conversations/' + filepath + f'/{filepattern}.json'))):
             bid = '_'.join(f.split('/')[-1].split('_')[:-1])
             board = board_cons(bid)
@@ -105,57 +120,94 @@ class ConversationalDataset(Dataset):
             yield bid, board
 
     @staticmethod
-    def stat_conversation(conv, label='conversational'):
+    def _stat_conversational(conv):
+        """
+        Returns the conversational stats
+        for a conversation chunk
+        """
+        pids = {post['post_id'] for post in conv}
+        return {
+            'sources':       1 if any([len(post['reply_to']) == 0 for post in conv]) else 0,
+            'conversations': 1,
+            'posts':         len(conv),
+            'pairs':         len([1 for post in conv if len([1 for rid in post['reply_to'] if rid in pids]) > 0]),
+            'voices':        '\t\t\t'.join({post['author'] for post in conv if post['author']})
+        }
+
+    @staticmethod
+    def _stat_tokens(conv):
+        """
+        Produces stats about the space-separated tokens
+        of a conversation chunk
+        """
+        tokens = re.split('\s+', ' '.join([post['text'] for post in conv]))
+        normal = set(tokens)
+        lower = {n.lower() for n in normal}
+        return {
+            'unique':       '\t\t\t'.join(normal),
+            'unique_lower': '\t\t\t'.join(lower),
+            'tokens':       len(tokens)
+        }
+
+    @staticmethod
+    def _stat_topo(conv):
+        """
+        Produces topological stats about a conversation
+        chunk based on treating it like a
+        directed acyclic graph (DAG)
+        """
+        pids = [post['post_id'] for post in conv]
+
+        # create DAG
+        graph = nx.DiGraph()
+        graph.add_nodes_from(pids)
+
+        # add edges
+        for pid, post in zip(pids, conv):
+            for rid in post['reply_to']:
+                if post['platform'] == '4Chan' and rid >= pid:
+                    continue
+
+                if rid in graph.nodes:
+                    graph.add_edge(pid, rid)
+
+        return {
+            'nodes':        graph.number_of_nodes(),
+            'density':      nx.density(graph),
+            'longest_path': nx.algorithms.dag_longest_path_length(graph),
+            'in_degrees':   np.average([graph.in_degree[n] for n in graph.nodes]),
+            'out_degrees':  np.average([graph.out_degree[n] for n in graph.nodes])
+        }
+
+    @staticmethod
+    def _stat_conversation(conv, label='conversational'):
+        """
+        High-level interface for extracting stats and insights
+        about conversational chunks
+        """
         if label == 'conversational':
-            pids = {post['post_id'] for post in conv}
-            return {
-                'sources': 1 if any([len(post['reply_to']) == 0 for post in conv]) else 0,
-                'conversations': 1,
-                'posts': len(conv),
-                'pairs': len([1 for post in conv if len([1 for rid in post['reply_to'] if rid in pids]) > 0]),
-                'voices': '\t\t\t'.join({post['author'] for post in conv if post['author']})
-            }
+            return ConversationalDataset._stat_conversational(conv)
         elif label == 'token':
-            tokens = re.split('\s+', ' '.join([post['text'] for post in conv]))
-            normal = set(tokens)
-            lower = {n.lower() for n in normal}
-            return {
-                'unique': '\t\t\t'.join(normal),
-                'unique_lower': '\t\t\t'.join(lower),
-                'tokens': len(tokens)
-            }
+            return ConversationalDataset._stat_tokens(conv)
         elif label == 'topological':
-            pids = [post['post_id'] for post in conv]
-
-            # create DAG
-            graph = nx.DiGraph()
-            graph.add_nodes_from(pids)
-
-            # add edges
-            for pid, post in zip(pids, conv):
-                for rid in post['reply_to']:
-                    if post['platform'] == '4Chan' and rid >= pid:
-                        continue
-
-                    if rid in graph.nodes:
-                        graph.add_edge(pid, rid)
-
-            return {
-                'nodes':        graph.number_of_nodes(),
-                'density':      nx.density(graph),
-                'longest_path': nx.algorithms.dag_longest_path_length(graph),
-                'in_degrees':   np.average([graph.in_degree[n] for n in graph.nodes]),
-                'out_degrees': np.average([graph.out_degree[n] for n in graph.nodes])
-            }
+            return ConversationalDataset._stat_topo(conv)
         else:
             raise ValueError(f'Unrecognized label value: {label}')
 
     def stat(self, filepath, board_cons, post_cons, filepattern='*', label='conversational'):
+        """
+        Given a file pattern, this function will compute
+        stats about the cached conversations found
+        in a manner that is more memory efficient
+        than loading all chached conversations
+        into memory directly.
+        This function will print a latex table, by default.
+        """
         df = None
         for bid, board_chunk in self.conversation_iterator(filepath, board_cons, post_cons, filepattern):
             chunk_stats = []
             for conv in board_chunk.conversations.values():
-                s = self.stat_conversation(conv, label)
+                s = self._stat_conversation(conv, label)
                 s['board_id'] = bid
                 chunk_stats.append(s)
 
@@ -164,9 +216,16 @@ class ConversationalDataset(Dataset):
             else:
                 df = pd.DataFrame(chunk_stats)
 
-        self.latex_table(df, label)
+        self._latex_table(df, label)
 
-    def latex_table(self, df, label):
+    @staticmethod
+    def _latex_table(df, label):
+        """
+        Method for printing out a latex table with
+        the appropriate stats
+        (including filtering of data
+        that makes up less than 1% of the stats)
+        """
         table = []
         if label == 'conversational':
             #  calculate total first...
@@ -301,6 +360,13 @@ class ConversationalDataset(Dataset):
         print()
 
     def redact(self, root):
+        """
+        Function for redacting a dataset
+        in a conversationally scoped manner,
+        but with caching of the true data
+
+        TODO: This function needs to be updated to work with an iterator
+        """
         with open(f'{self.DATA_ROOT}conversations/{root}.json', 'w+') as fp:
             for board in tqdm(self._boards):
                 ns = self._boards[board].redact()
@@ -309,6 +375,11 @@ class ConversationalDataset(Dataset):
 
     def batch_chunk(self, pattern, outpath, board_cons, post_cons,
                     seed=42, batch_size=2048 * 2048, dev_ratio=0.01):
+        """
+        Given a pattern, will generate structured
+        post-reply text pairs in a batched file format,
+        with a default ratio of 1% dev holdout
+        """
         np.random.seed(seed)
         random.seed = seed
 
@@ -363,12 +434,6 @@ class ConversationalDataset(Dataset):
         if dv_cur:
             with open(f'{outpath}dev.json', 'a+') as fp:
                 fp.writelines(dv_cur)
-
-    def __len__(self):
-        return len(self._ids)
-
-    def __getitem__(self, item):
-        return self._ids[item]
 
 
 class NewstweetThreads(ConversationalDataset):
