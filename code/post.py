@@ -191,6 +191,10 @@ class UniversalPost(ABC):
 
 class Tweet(UniversalPost):
 
+    """
+    Twitter post object with additional Twitter-specific features
+    """
+
     def __init__(self, **args):
         super(Tweet, self).__init__(**args)
 
@@ -201,19 +205,19 @@ class Tweet(UniversalPost):
         self.created_at = datetime.strptime(timestr, '%a %b %d %H:%M:%S +0000 %Y')
 
     def get_mentions(self):
+        # twitter mention regex
         names = re.findall(r'@([^\s:]+)', self.text)
 
         return super(Tweet, self).get_mentions() | set(names)
 
-    def redact(self, name_map):
-        for name in re.findall(r'@([^\s:]+)', self.text):
-            self.text = self.text.replace(name, name_map[name])
-
-        self.author = name_map[self.author]
-
 
 class FBPost(UniversalPost):
 
+    """
+    Facebook post object
+    """
+
+    # List of keys that may contain text data for a Facebook post
     TEXT = ['name', 'message', 'story', 'description', 'caption']
 
     def __init__(self, **args):
@@ -227,6 +231,10 @@ class FBPost(UniversalPost):
 
     @staticmethod
     def find_text(raw_post):
+        """
+        Given a raw post object, this function
+        returns the text by searching through the keys
+        """
         text = ''
         for key in FBPost.TEXT:
             text = (text + ' ' + raw_post.get(key, '')).strip()
@@ -235,33 +243,34 @@ class FBPost(UniversalPost):
             ks = set(raw_post.keys())
             ks -= set(FBPost.TEXT)
 
-            ignore_keys = {'picture', 'link', 'video', 'updated_time', 'id', 'created_time', 'shares', 'text'}
-            ks -= ignore_keys
-
-            if ks:
-                print(ks)
-                print('Empty source post...')
-                import pdb
-                pdb.set_trace()
+            assert len(ks) == 0
+            # un-comment if new keys are found
+            # ignore_keys = {
+            #     'picture', 'link', 'video', 'updated_time', 'id', 'created_time', 'shares', 'text', 'source'
+            # }
+            # ks -= ignore_keys
+            #
+            # if ks:
+            #     print(ks)
+            #     print('Empty source post...')
+            #     import pdb
+            #     pdb.set_trace()
 
         return text
 
 
 class RedditPost(UniversalPost):
+    """
+    Reddit post object
+    """
     def _string_to_creation(self, x):
         self.created_at = datetime.fromtimestamp(float(x))
 
     def get_mentions(self):
+        # Reddit user regex
         names = re.findall(r'/?u/([A-Za-z0-9_-]+)', self.text)
 
         return super(RedditPost, self).get_mentions() | set(names)
-
-    def redact(self, name_map):
-        for k, v in name_map.items():
-            self.text = re.sub(k, v, self.text)
-
-        if self.author:
-            self.author = name_map[self.author]
 
 
 class ChanPost(UniversalPost):
@@ -270,6 +279,11 @@ class ChanPost(UniversalPost):
 
     @staticmethod
     def exclude_replies(comment):
+        """
+        Function to remove quotes from a reply
+        and return reference to the posts that
+        were replied to
+        """
         refs = re.findall('>>(\d+)', comment)
 
         lines = comment.split("\n")
@@ -281,6 +295,10 @@ class ChanPost(UniversalPost):
 
     @staticmethod
     def clean_text(comment):
+        """
+        Cleans the raw HTML of a cached 4chan post,
+        returning both the references and teh comment itself
+        """
         comment = html.unescape(comment)
         comment = sub("<w?br/?>", "\n", comment)
         comment = sub("<a href=\".+\" class=\"(\w+)\">", \
