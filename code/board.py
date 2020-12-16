@@ -2,8 +2,6 @@ import re
 import os
 import json
 
-import networkx as nx
-
 from datetime import datetime
 from glob import glob
 from tqdm import tqdm
@@ -13,25 +11,38 @@ from post import Tweet, FBPost, RedditPost, ChanPost
 
 import gcld3
 
+# Language detection module with reliability flag
 detector = gcld3.NNetLanguageIdentifier(min_num_bytes=0, max_num_bytes=1000)
 
 
 class Board:
+
+    """
+    The general wrapper of a collection of posts.
+    This class is titled `Board` but can generalize to:
+    - A Reddit sub-reddit
+    - A 4Chan board
+    - A Facebook page / group (?)
+    - A Twitter user timeline or list
+    """
+
+    RETAIN_LANGS = {'en', 'und'}
+
     def __init__(self, board_id):
         # unique board id (or page or originator)
         self._board_id = board_id
 
-        # stores all posts
+        # dictionary mapping from post_id to Post object
         self._posts = {}
 
-        self._conversations = {}
-
-        # stores actual root IDs
-        self._roots = set()
-
-        # mapping for conversational indexing
+        # Given a post_id, maps to its conversation id
         self._pid_to_convo_id = {}
+
+        # Given a conversation id, maps to a set of associated post_ids
         self._convo_id_to_pids = defaultdict(set)
+
+        # An object to cache the conversations when a board has been chunked
+        self._conversations = {}
 
     @property
     def board_id(self):
@@ -41,18 +52,36 @@ class Board:
     def posts(self):
         return self._posts
 
+    def chunk_conversations(self, force_refresh=False, min_path_len=2):
+        """
+        Given a set of posts loaded into this board,
+        this function chunks them into independent conversations.
+
+        The minimum path length parameter is set to 2 by default
+        to filter out singleton posts.
+        If singletons are desired, change this to 1 or 0.
+        """
+        if self._conversations and not force_refresh:
+            return
+
+        self._conversations = {
+            convo_id: [self.posts[pid].to_json() for pid in pids]
+            for convo_id, pids in self._convo_id_to_pids.items()
+            if len(pids) >= min_path_len
+        }
+
     @property
     def conversations(self):
         if not self._conversations:
-            self._conversations = {
-                convo_id: [self.posts[pid].to_json() for pid in pids]
-                for convo_id, pids in self._convo_id_to_pids.items()
-                if len(pids) > 1  # need to at least be a pair
-            }
+            self.chunk_conversations()
 
         return self._conversations
 
     def load_conversations(self, data, post_cons):
+        """
+        Ingests raw conversation data,
+        read from JSON files
+        """
         self._conversations = {}
         for convo_id, posts in data.items():
             for post in posts:
@@ -63,30 +92,25 @@ class Board:
                 self._pid_to_convo_id[p.post_id] = convo_id
                 self._convo_id_to_pids[convo_id].add(p.post_id)
 
-                if len(p.reply_to) == 0:
-                    self._roots.add(p.post_id)
-
-    @property
-    def roots(self):
-        return self._roots
-
     @staticmethod
     def filter_post(post):
-        # check language
-        # reject reliably other
-        retain = {'en', 'und'}
-
+        """
+        Filters a post based on language detection
+        of the text
+        """
         res = detector.FindLanguage(text=post.text)
-        p_lang = res.language
-        reliable = res.is_reliable
-        if p_lang not in retain and reliable:
+
+        if res.language not in Board.RETAIN_LANGS and res.is_reliable:
             return True
 
-        post.lang = p_lang if reliable else None
+        post.lang = res.language if res.is_reliable else 'und'
 
         return False
 
     def add_post(self, post, check=True):
+        """
+        Adds a post to the board
+        """
         # No language, check and set
         if check and not post.lang and self.filter_post(post):
             return
@@ -97,6 +121,9 @@ class Board:
         self._posts[post.__hash__()] = post
 
     def remove_post(self, pid):
+        """
+        Removes a post from a board
+        """
         if pid in self._posts:
             del self._posts[pid]
             self._conversations = None
@@ -104,61 +131,71 @@ class Board:
             raise KeyError
 
     def generate_pairs(self):
+        """
+        Gemerates a list of structured
+        post-reply pairs
+        """
         pairs = []
         for _, post in self.posts.items():
-            for rid in post.reply_to:
-                if rid in self.posts:
-                    pairs.append({
-                        'post': self.posts[rid].text,
-                        'reply': post.text
-                    })
+            pairs.extend([{
+                'post': self.posts[rid].text,
+                'reply': post.text
+            } for rid in post.reply_to if rid in self.posts])
 
         return pairs
 
     def redact(self):
-        raise NotImplementedError()
+        """
+        Performs a conversationally-scoped redaction of user mentions
+        """
+        names_by_source = defaultdict(set)
 
-        # names_by_source = defaultdict(set)
-        #
-        # # gather name references
-        # for post in self._posts.values():
-        #     names_by_source[self.get_convo_id(post)] |= post.get_names()
-        #
-        # # create maps
-        # name_map = {rid: {name: f'USER{ix}' for ix, name in enumerate(pids)} for rid, pids in names_by_source.items()}
-        #
-        # # redact with map
-        # print('REDACTION')
-        # for post in tqdm(self._posts.values()):
-        #     mx = name_map[self.get_convo_id(post)]
-        #     post.redact(mx)
-        #
-        # return dict(name_map)
+        # gather name references
+        print(f'Collecting user mentions / names')
+        for post in tqdm(self._posts.values()):
+            names_by_source[self._pid_to_convo_id[post.post_id]] |= post.get_mentions()
+
+        # create maps
+        name_map = {
+            convo_id: {name: f'USER{ix}' for ix, name in enumerate(pids)} for convo_id, pids in names_by_source.items()
+        }
+
+        # redact with map
+        print('REDACTION')
+        for post in tqdm(self._posts.values()):
+            mx = name_map[self._pid_to_convo_id[post.post_id]]
+            post.redact(mx)
+
+        return dict(name_map)
 
     def construct_conversations(self):
-        self._roots = set()
-
+        """
+        Reconstructs raw conversational trees
+        """
         self._pid_to_convo_id = {}
         self._convo_id_to_pids = defaultdict(set)
 
         for pid, post in tqdm(self._posts.items()):
             if pid not in self._pid_to_convo_id:
                 if post.platform == '4Chan':
+                    # 4Chan data has weird cyclic issues at times where posts
+                    # refer to themselves or to posts that have happened in the future
+                    # (I found at least 2 examples of lists of prime numbers?)
                     post.reply_to = {rid for rid in post.reply_to if rid < pid}
 
                 self.build_convo_path(post)
 
     def build_convo_path(self, post):
+        """
+        For a post, follows its conversational thread pointers
+        to the highest post we have loaded into memory
+        """
         breadth = len(post.reply_to)
         pid = post.post_id
 
         if breadth == 0:
-            # this is a true root
-            self._roots.add(pid)
-
             # set conversation to itself
-            self._pid_to_convo_id[pid] = pid
-            self._convo_id_to_pids[pid].add(pid)
+            convo_id = pid
         elif breadth == 1:
             rid = list(post.reply_to)[0]
             if rid in self.posts:
@@ -169,11 +206,9 @@ class Board:
                     self.build_convo_path(self.posts[rid])
                 convo_id = self._pid_to_convo_id[rid]
             else:
+                # if we don't have a parent,
+                # assign this post to a new thread
                 convo_id = pid
-                self._roots.add(pid)
-
-            self._pid_to_convo_id[pid] = convo_id
-            self._convo_id_to_pids[convo_id].add(pid)
         else:
             if post.platform == '4Chan':
                 post.reply_to = {rid for rid in post.reply_to if rid < pid}
@@ -181,94 +216,26 @@ class Board:
             avail = [rid for rid in post.reply_to if rid in self.posts]
             convo_id = min(avail) if avail else pid
 
-            if convo_id == pid:
-                self._roots.add(pid)
-            else:
-                if convo_id not in self._pid_to_convo_id:
-                    # recurse
-                    self.build_convo_path(self.posts[convo_id])
+            if convo_id not in self._pid_to_convo_id:
+                # recurse
+                self.build_convo_path(self.posts[convo_id])
 
-            self._pid_to_convo_id[pid] = convo_id
-            self._convo_id_to_pids[convo_id].add(pid)
+        self._pid_to_convo_id[pid] = convo_id
+        self._convo_id_to_pids[convo_id].add(pid)
 
     def merge_board(self, board):
+        """
+        Merges two boards together
+        """
         assert self.board_id == board.board_id
 
         # absorb posts
-        for post in board.posts.values():
-            self.add_post(post, check=False)
+        self._posts = {**self._posts, **board.posts}
 
-    def to_json_file(self, filepath):
-        lines = [json.dumps(post.to_json()) + '\n' for post in self._posts.values()]
-        with open(filepath, 'w+') as fp:
-            fp.writelines(lines)
-
-    def from_json_file(self, filepath, post_obj):
-        with open(filepath) as fp:
-            lines = fp.readlines()
-
-        for line in lines:
-            ps = json.loads(line)
-            post = post_obj(post_id=0)
-            post.from_json(ps)
-            self._posts[post.post_id] = post
-
-    def graph_stats(self):
-        graph = nx.DiGraph()
-        graph.add_nodes_from(self._posts.keys())
-
-        for pid, post in self._posts.items():
-            for rid in post.reply_to:
-                if rid in graph.nodes:
-                    graph.add_edge(pid, rid)
-
-        stats = {
-            'density': [nx.density(graph)],
-            'longest_path': [nx.algorithms.dag_longest_path_length(graph)],
-            'in_degrees': [graph.in_degree[n] for n in graph.nodes],
-            'out_degrees': [graph.out_degree[n] for n in graph.nodes]
-        }
-
-        return stats
-
-    def conversational_stats(self):
-        sum_stat = {}
-        for post in self._posts.values():
-            if sum_stat:
-                for k, v in post.conversational_stats().items():
-                    if type(v) == int:
-                        sum_stat[k] += v
-                    elif type(v) == set:
-                        sum_stat[k] |= v
-                    else:
-                        print(f'Unknown type: {type(v)}, {v}')
-                        raise TypeError
-            else:
-                sum_stat = post.conversational_stats()
-
-        sum_stat['disjoint conversations'] = len(self._convo_id_to_pids)
-        sum_stat['sources'] = len(self._roots)
-        sum_stat['pairs'] = sum([len([1 for rid in post.reply_to if rid in self.posts]) for post in self.posts.values()])
-
-        return sum_stat
-
-    def token_stats(self):
-        sum_stat = {}
-        for post in self._posts.values():
-            s = post.token_stats()
-            if sum_stat:
-                for k, v in s.items():
-                    if type(v) == int:
-                        sum_stat[k] += v
-                    elif type(v) == set:
-                        sum_stat[k] |= v
-                    else:
-                        print(f'Unknown type: {type(v)}, {v}')
-                        raise TypeError
-            else:
-                sum_stat = s
-
-        return sum_stat
+        # Reset other pointers
+        self._pid_to_convo_id = {}
+        self._convo_id_to_pids = defaultdict(set)
+        self._conversations = {}
 
 
 class TwitterUser(Board):
