@@ -1,7 +1,5 @@
 import re
-import html
 
-from re import sub, match
 from abc import ABC, abstractmethod
 from datetime import datetime
 
@@ -235,52 +233,3 @@ class FBPost(UniversalPost):
             #     pdb.set_trace()
 
         return text
-
-
-class ChanPost(UniversalPost):
-    def _string_to_creation(self, x):
-        pass
-
-    @staticmethod
-    def exclude_replies(comment):
-        """
-        Function to remove quotes from a reply
-        and return reference to the posts that
-        were replied to
-        """
-        refs = re.findall('>>(\d+)', comment)
-
-        lines = comment.split("\n")
-        lines = filter(lambda x: not bool(match(">>(\d+)", x.strip())), lines)
-        comment = "\n".join(lines)
-        comment = sub(">>(\d+) ", " ", comment)
-
-        return comment, refs
-
-    @staticmethod
-    def clean_text(comment):
-        """
-        Cleans the raw HTML of a cached 4chan post,
-        returning both the references and teh comment itself
-        """
-        comment = html.unescape(comment)
-        comment = sub("<w?br/?>", "\n", comment)
-        comment = sub("<a href=\".+\" class=\"(\w+)\">", \
-                      " ", comment)
-        comment = sub("</a>", " ", comment)
-        comment = sub("<span class=\"(\w+)\">", " ", comment)
-        comment = sub("</span>", " ", comment)
-        comment = sub("<pre class=\"(\w+)\">", " ", comment)
-        comment = sub("</pre>", " ", comment)
-
-        comment, rfs = ChanPost.exclude_replies(comment)
-
-        comment = sub("[^\x00-\x7F]", " ", comment)
-
-        comment = sub("&(amp|lt|gt|ge|le)(;|)", " ", comment)
-
-        comment = sub("\\s\\s+", " ", comment)
-        comment = sub("\n", " ", comment)
-        comment = str(comment).strip()
-
-        return comment, rfs

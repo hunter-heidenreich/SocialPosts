@@ -7,13 +7,12 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 
-from datetime import datetime
 from tqdm import tqdm
 from glob import glob
 
 
-from post import FBPost, ChanPost
-from board import FBPage, ChanBoard
+from post import FBPost
+from board import FBPage
 from utils import display_num
 
 
@@ -489,134 +488,3 @@ class Outlets(ConversationalDataset):
 
     def load_cache(self):
         self.load_jsons(filepath='Facebook/Outlets/')
-
-
-class Chan(ConversationalDataset):
-
-    # BOARD = 'news'
-    # BOARD = 'sci'
-    # BOARD = 'his'
-    # BOARD = 'x'
-    # BOARD = 'g'
-    BOARD = 'pol'
-
-    CONVO_SIZE = 1e6
-
-    def load(self):
-        super(Chan, self).load()
-
-        board = ChanBoard(self.BOARD)
-        for i in tqdm(range(100)):
-            board.merge_board(ChanBoard.load_chunk(Chan.BOARD, i))
-        self._boards[self.BOARD] = board
-
-    def batch_load(self):
-        for i in tqdm(range(100)):
-            self._boards[Chan.BOARD] = ChanBoard.load_chunk(Chan.BOARD, i)
-            self.dump_conversation(filepath=f'4chan', board_suffix=i)
-
-    def cache(self):
-        self.dump_conversation(filepath=f'4chan')
-
-    def load_cache(self):
-        self.load_conversation(filepath=f'4chan', board_cons=ChanBoard, post_cons=ChanPost,
-                               filepattern=f'{self.BOARD}_*')
-
-
-if __name__ == '__main__':
-    # Facebook
-
-    # BF = BuzzFace()
-
-    # BF.load()
-    # BF.cache()
-
-    # BF.load_cache()
-
-    # BF.latex_table(sel='conversational')
-    # BF.latex_table(sel='token')
-    # BF.latex_table(sel='graph')
-
-    # outlets = Outlets()
-
-    # outlets.load()
-    # outlets.cache()
-
-    # outlets.load_cache()
-
-    # outlets.latex_table(sel='conversational')
-    # outlets.latex_table(sel='token')
-    # outlets.latex_table(sel='graph')
-
-    # cmv = RedditCMV()
-
-    # complete raw rebuild
-    # cmv.load()
-    # cmv.cache()
-
-    # Redact from cache and update cache
-    # cmv.load_cache()
-    # cmv.redact('Reddit/CMV')
-    # cmv.cache()
-
-    # Just read
-    # cmv.load_cache()
-
-    # cmv.latex_table(sel='conversational')
-    # cmv.latex_table(sel='token')
-    # cmv.latex_table(sel='graph')
-
-    # cmv.load()
-    # cmv.latex_table(sel='conversational')
-    # cmv.latex_table(sel='token')
-    # cmv.latex_table(sel='graph')
-
-    # dialog = RedditExtractor()
-    # dialog.batch_chunk('Reddit/RD/*/', 'data/batched/', SubReddit, RedditPost, batch_load=True)
-
-    # complete raw rebuild
-    # dialog.load_batch('Reddit/RD')
-
-    # dialog.load()
-    # dialog.cache()
-
-    # Redact from cache and update cache
-    # dialog.load_cache()
-    # dialog.redact('Reddit/RD')
-    # dialog.cache()
-
-    # Just read
-    # dialog.load_cache()
-
-    # dialog.latex_table(sel='conversational')
-    # dialog.latex_table(sel='token')
-    # dialog.latex_table(sel='graph')
-
-    # 4chan
-
-    chan = Chan()
-    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='conversational')
-    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='token')
-    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='topological')
-
-    # chan.batch_load()
-    # chan.load()  # loads the raw form
-    # chan.cache()  # cache as conversation form
-    # chan.load_cache()  # load conversation directly
-
-    # chan.dump_conversation('4chan')  # dump in conversational chunks
-    # chan.load_conversation('4chan')
-
-    # chan.batch_chunk('4chan/', 'data/batched/chan/', ChanBoard, ChanPost)
-    
-    # chan.cache()
-    # chan.load_cache()
-    # chan.dump_old(datetime.today(), 0)
-
-    # chan.latex_table(sel='conversational')
-    # chan.latex_table(sel='token')
-    # chan.latex_table(sel='graph')
-
-    # import pdb
-    # pdb.set_trace()
-

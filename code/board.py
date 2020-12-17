@@ -5,7 +5,7 @@ from glob import glob
 from tqdm import tqdm
 from collections import defaultdict
 
-from post import FBPost, ChanPost
+from post import FBPost
 
 import gcld3
 
@@ -487,38 +487,3 @@ class FBPage(Board):
                         pdb.set_trace()
 
         return page
-
-
-class ChanBoard(Board):
-
-    @staticmethod
-    def load_chunk(board_name, chunk, data_root='/Users/hsh28/data'):
-        board = ChanBoard(board_name)
-
-        posts = json.load(open(f'{data_root}/4chan/{board_name}/{chunk:02d}.json'))
-        for k, post in posts.items():
-            if 'com' not in post:
-                continue
-
-            txt, rfs = ChanPost.clean_text(post['com'])
-            reps = {int(post['resto'])} | set([int(x) for x in rfs])
-
-            if 0 in reps:
-                reps.remove(0)
-
-            if int(post['no']) in reps:
-                reps.remove(int(post['no']))
-
-            p = ChanPost(**{
-                'post_id':    int(post['no']),
-                'created_at': datetime.fromtimestamp(post['time']),
-                'text':       txt,
-                'author':     post['name'] if 'name' in post else None,
-                'board_id':   board_name,
-                'platform':   '4Chan',
-                'reply_to':   reps
-            })
-
-            board.add_post(p)
-
-        return board
