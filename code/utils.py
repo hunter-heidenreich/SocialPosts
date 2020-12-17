@@ -8,4 +8,7 @@ def display_num(num):
     elif num > 1_000:
         return f"{num / 1_000:.2f} K"
     else:
+        if type(num) == int:
+            return str(num)
+
         return str(int(num)) if num.is_integer() else f'{num:.2f}'

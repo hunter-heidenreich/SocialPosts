@@ -12,8 +12,8 @@ from tqdm import tqdm
 from glob import glob
 
 
-from post import RedditPost, FBPost, ChanPost
-from board import FBPage, SubReddit, ChanBoard
+from post import FBPost, ChanPost
+from board import FBPage, ChanBoard
 from utils import display_num
 
 
@@ -489,130 +489,6 @@ class Outlets(ConversationalDataset):
 
     def load_cache(self):
         self.load_jsons(filepath='Facebook/Outlets/')
-
-
-class RedditCMV(ConversationalDataset):
-    def load(self):
-        super(RedditCMV, self).load()
-        board = SubReddit.load_cmv()
-        self._boards[board.board_id] = board
-        self._boards[board.board_id].build_roots()
-
-    def write_jsons(self, filepath):
-        super(RedditCMV, self).write_jsons(filepath)
-
-    def load_jsons(self, filepath, board_obj=None, post_obj=None):
-        super(RedditCMV, self).load_jsons(filepath, SubReddit, RedditPost)
-
-    def cache(self):
-        self.write_jsons(filepath='Reddit/CMV/')
-
-    def load_cache(self):
-        self.load_jsons(filepath='Reddit/CMV/')
-
-
-class RedditExtractor(ConversationalDataset):
-
-    def dump_batch_by_date(self, filepath, date_str, thresh=180):
-        for bid, board in self._boards.items():
-            print(f'Building board: {bid}')
-            board.construct_conversations()
-
-            os.makedirs(self.DATA_ROOT + 'conversations/' + filepath, exist_ok=True)
-
-            print(f'Extracting conversations')
-            convos = board.conversations
-            print(f'Found {display_num(len(convos))} conversations')
-
-            dt = datetime.strptime(date_str, '%Y-%m')
-            batch = 0
-            cur = 0
-            lines = []
-            for convo_id, posts in tqdm(convos.items()):
-                if (dt - board.posts[convo_id].created_at).days < thresh:
-                    continue
-
-                lines.append(json.dumps({
-                    'convo_id': convo_id,
-                    'posts':    posts
-                }) + '\n')
-
-                for post in posts:
-                    # remove all posts
-                    self._boards[bid].remove_post(post['post_id'])
-
-                cur += len(posts)
-                if cur > Chan.CONVO_SIZE:
-                    path = self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}{date_str}_{batch:04d}.json'
-                    with open(path, 'w+') as fp:
-                        fp.writelines(lines)
-                    print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
-                    batch += 1
-                    cur = 0
-                    lines = []
-
-            if lines:
-                path = self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}{date_str}_{batch:04d}.json'
-                with open(path, 'w+') as fp:
-                    fp.writelines(lines)
-                print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
-
-    def load_batch(self, filepath):
-        super(RedditExtractor, self).load()
-
-        thresh = 180 + 20  # dump posts older that 180 days (thus archived)
-        # jobs = mp.cpu_count() // 4
-
-        # assure correct format and gather board names
-        board_names = set()
-
-        # pool = mp.Pool(processes=jobs)
-
-        # print(f'Created pool with {jobs} workers')
-
-        months = glob(f'{self.DATA_ROOT}DialoGPTdata/*/')
-
-        # for names in tqdm(pool.imap_unordered(func=SubReddit.preprocess_extract,
-        #                                       iterable=months), total=len(months)):
-        for month in tqdm(sorted(months)):
-            print(month)
-            names = SubReddit.preprocess_extract(month)
-            board_names |= names
-
-        print(f'Found {len(board_names)} boards')
-
-        for bid in board_names:
-            print(f'Loading board: {bid}')
-            board = SubReddit(bid)
-            for f in tqdm(sorted(glob(f'{self.DATA_ROOT}DialoGPTdata/*/{bid}.json'))):
-                with open(f) as fp:
-                    for line in fp.readlines():
-                        post = RedditPost(post_id=0)
-                        post.from_json(json.loads(line))
-                        board.add_post(post)
-            
-            self._boards[bid] = board
-            self.dump_conversation(filepath='Reddit/RD')
-            del self._boards[bid]
-
-            # for bid, board in SubReddit.preprocess_extract(f).items():
-            #     if bid in self._boards:
-            #         self._boards[bid].merge_board(board)
-            #     else:
-            #         self._boards[bid] = board
-            #
-            # if len(self._boards):
-            #     posts = sum([len(b.posts) for b in self._boards.values()])
-            #     print(f'{display_num(posts)} posts in memory')
-            #
-            # date_str = f.split('/')[-2]
-            # self.dump_batch_by_date(filepath, date_str, thresh=thresh)
-
-    def cache(self):
-        self.dump_conversation(filepath='Reddit/RD')
-
-    def load_cache(self):
-        self.load_conversation(filepath='Reddit/RD', board_cons=SubReddit, post_cons=RedditPost)
 
 
 class Chan(ConversationalDataset):

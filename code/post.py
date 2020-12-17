@@ -237,20 +237,6 @@ class FBPost(UniversalPost):
         return text
 
 
-class RedditPost(UniversalPost):
-    """
-    Reddit post object
-    """
-    def _string_to_creation(self, x):
-        self.created_at = datetime.fromtimestamp(float(x))
-
-    def get_mentions(self):
-        # Reddit user regex
-        names = re.findall(r'/?u/([A-Za-z0-9_-]+)', self.text)
-
-        return super(RedditPost, self).get_mentions() | set(names)
-
-
 class ChanPost(UniversalPost):
     def _string_to_creation(self, x):
         pass
