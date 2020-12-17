@@ -1,11 +1,11 @@
 def display_num(num):
     if num > 1_000_000_000_000:
-        return f"{num / 1_000_000_000_000:.1f} T"
+        return f"{num / 1_000_000_000_000:.2f} T"
     elif num > 1_000_000_000:
-        return f"{num / 1_000_000_000:.1f} B"
+        return f"{num / 1_000_000_000:.2f} B"
     elif num > 1_000_000:
-        return f"{num / 1_000_000:.1f} M"
+        return f"{num / 1_000_000:.2f} M"
     elif num > 1_000:
-        return f"{num / 1_000:.1f} K"
+        return f"{num / 1_000:.2f} K"
     else:
-        return f"{num:.1f}"
+        return str(int(num)) if num.is_integer() else f'{num:.2f}'

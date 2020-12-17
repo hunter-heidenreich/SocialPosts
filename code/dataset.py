@@ -12,8 +12,8 @@ from tqdm import tqdm
 from glob import glob
 
 
-from post import Tweet, RedditPost, FBPost, ChanPost
-from board import TwitterUser, FBPage, SubReddit, ChanBoard
+from post import RedditPost, FBPost, ChanPost
+from board import FBPage, SubReddit, ChanBoard
 from utils import display_num
 
 
@@ -23,8 +23,8 @@ class ConversationalDataset:
     An interface for a conversational, social media dataset
     """
 
-    # DATA_ROOT = '/Users/hsh28/data/'
-    DATA_ROOT = '/local-data/socialtransformer/'
+    DATA_ROOT = '/Users/hsh28/data/'
+    # DATA_ROOT = '/local-data/socialtransformer/'
 
     # # of posts in a conversation chunk
     CONVO_SIZE = 1e6
@@ -106,7 +106,13 @@ class ConversationalDataset:
         at a lower memory foot print than loading
         all data into memory directly
         """
-        for f in tqdm(sorted(glob(self.DATA_ROOT + 'conversations/' + filepath + f'/{filepattern}.json'))):
+        search_path = self.DATA_ROOT + 'conversations/' + filepath + f'/{filepattern}.json'
+        print(search_path)
+
+        paths = sorted(glob(search_path))
+        for ix, f in enumerate(paths):
+            print(f'{f} {ix+1}/{len(paths)}')
+
             bid = '_'.join(f.split('/')[-1].split('_')[:-1])
             board = board_cons(bid)
 
@@ -175,8 +181,9 @@ class ConversationalDataset:
             'nodes':        graph.number_of_nodes(),
             'density':      nx.density(graph),
             'longest_path': nx.algorithms.dag_longest_path_length(graph),
-            'in_degrees':   np.average([graph.in_degree[n] for n in graph.nodes]),
-            'out_degrees':  np.average([graph.out_degree[n] for n in graph.nodes])
+            'degrees':      np.average([graph.in_degree[n] + graph.out_degree[n] for n in graph.nodes]),
+            # 'in_degrees':   np.average([graph.in_degree[n] for n in graph.nodes]),
+            # 'out_degrees':  np.average([graph.out_degree[n] for n in graph.nodes])
         }
 
     @staticmethod
@@ -216,7 +223,8 @@ class ConversationalDataset:
             else:
                 df = pd.DataFrame(chunk_stats)
 
-        self._latex_table(df, label)
+        if df is not None:
+            self._latex_table(df, label)
 
     @staticmethod
     def _latex_table(df, label):
@@ -227,131 +235,118 @@ class ConversationalDataset:
         that makes up less than 1% of the stats)
         """
         table = []
+        desc_map = {
+            'mean': 'Avg.',
+            'std':  'Std. Dev.',
+            'min':  'Min.',
+            '25%':  '25%',
+            '50%':  '50%',
+            '75%':  '75%',
+            'max':  'Max.'
+        }
         if label == 'conversational':
-            #  calculate total first...
+            ft_map = {
+                'sources': 'Sources',
+                'conversations': 'Conversations',
+                'posts': 'Posts',
+                'pairs': 'Pairs',
+                'vox_cnt': 'Voices',
+            }
+
             total_vox = set()
-            total_posts = df.posts.sum()
-            for group, dfi in df.groupby('board_id'):
+            vox_cnts = []
+            for vs in df.voices.values:
                 vox = set()
-                for vs in dfi.voices.values:
-                    for v in vs.split('\t\t\t'):
-                        vox.add(v)
+                for v in vs.split('\t\t\t'):
+                    vox.add(v)
+                vox_cnts.append(len(vox))
                 total_vox |= vox
 
-                post_cnt = dfi.posts.sum()
-                if post_cnt / total_posts < 0.01:
-                    continue
+            df['vox_cnt'] = vox_cnts
 
-                out = '\t'
-                out += group.replace('_', '\\_').replace('%', '\\%') + ' & '
-                out += display_num(int(dfi.sources.sum())) + ' & '
-                out += display_num(int(dfi.conversations.sum())) + ' & '
-                out += display_num(int(post_cnt)) + f' ({100 * post_cnt / total_posts:.2f}\\%)' + ' & '
-                out += display_num(int(dfi.pairs.sum())) + ' & '
-                out += display_num(len(vox)) + ' \\\\ '
+            desc = df.describe()
+            for row in desc_map:
+                out = f'{desc_map[row]}'
+                for col in ft_map:
+                    out += f' & {display_num(desc[col][row])}'
+                out += ' \\\\'
 
                 table.append(out)
 
-            table.append('\t\\hline')
+            table.append('\\hline')
 
-            # group voices by conversation
-            df.voices = [len(v.split('\t\t\t')) for v in df.voices.values]
-
-            out = '\t'
-            out += 'Avg. Conversation & '
-            out += display_num(df.sources.mean()) + ' $\\pm$ ' + display_num(df.sources.std()) + ' & '
-            out += display_num(df.conversations.mean()) + ' $\\pm$ ' + display_num(df.conversations.std()) + ' & '
-            out += display_num(df.posts.mean()) + ' $\\pm$ ' + display_num(df.posts.std()) + ' & '
-            out += display_num(df.pairs.mean()) + ' $\\pm$ ' + display_num(df.pairs.std()) + ' & '
-            out += display_num(df.voices.mean()) + ' $\\pm$ ' + display_num(df.voices.std()) + ' \\\\ '
-
-            table.append(out)
-
-            out = '\t'
-            out += 'Total & '
+            out = 'Total & '
             out += display_num(df.sources.sum()) + ' & '
             out += display_num(df.conversations.sum()) + ' & '
-            out += display_num(total_posts) + ' & '
+            out += display_num(df.posts.sum()) + ' & '
             out += display_num(df.pairs.sum()) + ' & '
             out += display_num(len(total_vox)) + ' \\\\ '
 
             table.append(out)
         elif label == 'token':
+            ft_map = {
+                'tokens':       'Tokens',
+                'unique':       'Unique',
+                'lower': 'Unique Lower',
+            }
+
             total_unique = set()
             total_lower = set()
-            total_tokens = df.tokens.sum()
-            for group, dfi in df.groupby('board_id'):
+
+            u_cnts = []
+            for vs in df.unique.values:
                 unique = set()
-                for vs in dfi.unique.values:
-                    for v in vs.split('\t\t\t'):
-                        unique.add(v)
+                for v in vs.split('\t\t\t'):
+                    unique.add(v)
+
+                u_cnts.append(len(unique))
                 total_unique |= unique
 
+            l_cnts = []
+            for vs in df.unique_lower.values:
                 lower = set()
-                for vs in dfi.unique_lower.values:
-                    for v in vs.split('\t\t\t'):
-                        lower.add(v)
+                for v in vs.split('\t\t\t'):
+                    lower.add(v)
+
+                l_cnts.append(len(lower))
                 total_lower |= lower
 
-                token_cnt = dfi.tokens.sum()
-                if token_cnt / total_tokens < 0.01:
-                    continue
+            df['unique'] = u_cnts
+            df['lower'] = l_cnts
 
-                out = '\t'
-                out += group.replace('_', '\\_').replace('%', '\\%') + ' & '
-                out += display_num(token_cnt) + f' ({100 * token_cnt / total_tokens:.2f}\\%)' + ' & '
-                out += display_num(len(unique)) + ' & '
-                out += display_num(len(lower)) + ' \\\\ '
+            desc = df.describe()
+            for row in desc_map:
+                out = f'{desc_map[row]}'
+                for col in ft_map:
+                    out += f' & {display_num(desc[col][row])}'
+                out += ' \\\\'
 
                 table.append(out)
 
-            table.append('\t\\hline')
+            table.append('\\hline')
 
-            # group tokens by conversation
-            df.unique = [len(v.split('\t\t\t')) for v in df.unique.values]
-            df.unique_lower = [len(v.split('\t\t\t')) for v in df.unique_lower.values]
-
-            out = '\t'
-            out += 'Avg. Conversation & '
-            out += display_num(df.tokens.mean()) + ' $\\pm$ ' + display_num(df.tokens.std()) + ' & '
-            out += display_num(df.unique.mean()) + ' $\\pm$ ' + display_num(df.unique.std()) + ' & '
-            out += display_num(df.unique_lower.mean()) + ' $\\pm$ ' + display_num(df.unique_lower.std()) + ' \\\\ '
-
-            table.append(out)
-
-            out = '\t'
-            out += 'Total & '
-            out += display_num(total_tokens) + ' & '
+            out = 'Total & '
+            out += display_num(df.tokens.sum()) + ' & '
             out += display_num(len(total_unique)) + ' & '
             out += display_num(len(total_lower)) + ' \\\\ '
 
             table.append(out)
         elif label == 'topological':
-            total_degree = df.nodes.sum()
-            for group, dfi in df.groupby('board_id'):
-                degree = dfi.nodes.sum()
-                if degree / total_degree < 0.01:
-                    continue
+            ft_map = {
+                # 'nodes':
+                'density': 'Density',
+                'longest_path': 'Longest Path',
+                'degrees': 'Degree',
+            }
 
-                out = '\t'
-                out += group.replace('_', '\\_').replace('%', '\\%') + ' & '
-                out += display_num(dfi.in_degrees.mean()) + ' $\\pm$ ' + display_num(dfi.in_degrees.std()) + ' & '
-                out += display_num(dfi.out_degrees.mean()) + ' $\\pm$ ' + display_num(dfi.out_degrees.std()) + ' & '
-                out += display_num(dfi.longest_path.mean()) + ' $\\pm$ ' + display_num(dfi.longest_path.std()) + ' & '
-                out += display_num(dfi.density.mean()) + ' $\\pm$ ' + display_num(dfi.density.std()) + ' \\\\ '
+            desc = df.describe()
+            for row in desc_map:
+                out = f'{desc_map[row]}'
+                for col in ft_map:
+                    out += f' & {display_num(desc[col][row])}'
+                out += ' \\\\'
 
                 table.append(out)
-
-            table.append('\t\\hline')
-
-            out = '\t'
-            out += 'Avg. Conversation & '
-            out += display_num(df.in_degrees.mean()) + ' $\\pm$ ' + display_num(df.in_degrees.std()) + ' & '
-            out += display_num(df.out_degrees.mean()) + ' $\\pm$ ' + display_num(df.out_degrees.std()) + ' & '
-            out += display_num(df.longest_path.mean()) + ' $\\pm$ ' + display_num(df.longest_path.std()) + ' & '
-            out += display_num(df.density.mean()) + ' $\\pm$ ' + display_num(df.density.std()) + ' \\\\ '
-
-            table.append(out)
         else:
             print(label)
             raise ValueError
@@ -434,44 +429,6 @@ class ConversationalDataset:
         if dv_cur:
             with open(f'{outpath}dev.json', 'a+') as fp:
                 fp.writelines(dv_cur)
-
-
-class NewstweetThreads(ConversationalDataset):
-
-    def load(self):
-        super(NewstweetThreads, self).load()
-
-        for f in tqdm(glob(f'{self.DATA_ROOT}threads/*tweets.json')):
-            user = TwitterUser.load_thread(f)
-            if user.board_id in self._boards:
-                self._boards[user.board_id].merge_board(user)
-            else:
-                self._boards[user.board_id] = user
-
-        print(f'Loaded {len(self._boards)} user conversations')
-
-    def cache(self):
-        self.dump_conversation(filepath=f'Twitter/NTT')
-
-    def load_cache(self):
-        self.load_conversation(filepath=f'Twitter/NTT', board_cons=TwitterUser, post_cons=Tweet)
-
-
-class CoordinatedTargetingQuotes(ConversationalDataset):
-    def load(self):
-        super(CoordinatedTargetingQuotes, self).load()
-
-        self._boards['CTQ'] = TwitterUser('CTQ')
-        for f in tqdm(glob(f'{self.DATA_ROOT}quote_tweets/quotes/*.json')):
-            self._boards['CTQ'].merge_board(TwitterUser.load_quote_month(f))
-
-        print(f'Loaded {len(self._boards)} user conversations')
-
-    def cache(self):
-        self.dump_conversation(filepath=f'Twitter/CTQ')
-
-    def load_cache(self):
-        self.load_conversation(filepath=f'Twitter/CTQ', board_cons=TwitterUser, post_cons=Tweet)
 
 
 class BuzzFace(ConversationalDataset):
@@ -691,44 +648,6 @@ class Chan(ConversationalDataset):
 
 
 if __name__ == '__main__':
-    # Twitter
-
-    # NTT = NewstweetThreads()
-
-    # complete raw rebuild
-    # NTT.load()
-    # NTT.cache()
-
-    # Redact from cache and update cache
-    # NTT.load_cache()
-    # NTT.redact('Twitter/NewsTweetThreads')
-    # NTT.cache()
-
-    # Just read
-    # NTT.load_cache()
-
-    # NTT.stat('Twitter/NTT', TwitterUser, Tweet, label='conversational')
-    # NTT.stat('Twitter/NTT', TwitterUser, Tweet, label='token')
-    # NTT.stat('Twitter/NTT', TwitterUser, Tweet, label='topological')
-
-    # CTQ = CoordinatedTargetingQuotes()
-
-    # complete raw rebuild
-    # CTQ.load()
-    # CTQ.cache()
-
-    # Redact from cache and update cache
-    # CTQ.load_cache()
-    # CTQ.redact('Twitter/CoordinatedTargetingQuotes')
-    # CTQ.cache()
-
-    # Just read
-    # CTQ.load_cache()
-
-    # CTQ.stat('Twitter/CTQ', TwitterUser, Tweet, label='conversational')
-    # CTQ.stat('Twitter/CTQ', TwitterUser, Tweet, label='token')
-    # CTQ.stat('Twitter/CTQ', TwitterUser, Tweet, label='topological')
-
     # Facebook
 
     # BF = BuzzFace()
@@ -800,9 +719,9 @@ if __name__ == '__main__':
     # 4chan
 
     chan = Chan()
-    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='conversational')
+    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='conversational')
     chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='token')
-    chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='topological')
+    # chan.stat('4chan', ChanBoard, ChanPost, filepattern='*', label='topological')
 
     # chan.batch_load()
     # chan.load()  # loads the raw form

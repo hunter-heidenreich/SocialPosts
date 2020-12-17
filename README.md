@@ -7,6 +7,14 @@ conversational threads on various social media platforms.
 The mission of this project/package is to enable research and study 
 of conversational threads on social media.
 
+The following platforms are already implemented and directly integrated into this library:
+- Twitter
+- Reddit
+- 4Chan
+- Facebook
+
+Any questions or comments? Reach out to hunter (dot) scott (dot) heidenreich (at) gmail (dot) com!
+
 ## Core Objects
 
 ### Universal Post

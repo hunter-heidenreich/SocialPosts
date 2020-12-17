@@ -189,28 +189,6 @@ class UniversalPost(ABC):
             self.author = redact_map[self.author]
 
 
-class Tweet(UniversalPost):
-
-    """
-    Twitter post object with additional Twitter-specific features
-    """
-
-    def __init__(self, **args):
-        super(Tweet, self).__init__(**args)
-
-        if type(self.created_at) == str:
-            self._string_to_creation(self.created_at)
-
-    def _string_to_creation(self, timestr):
-        self.created_at = datetime.strptime(timestr, '%a %b %d %H:%M:%S +0000 %Y')
-
-    def get_mentions(self):
-        # twitter mention regex
-        names = re.findall(r'@([^\s:]+)', self.text)
-
-        return super(Tweet, self).get_mentions() | set(names)
-
-
 class FBPost(UniversalPost):
 
     """

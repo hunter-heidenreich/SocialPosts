@@ -7,7 +7,7 @@ from glob import glob
 from tqdm import tqdm
 from collections import defaultdict
 
-from post import Tweet, FBPost, RedditPost, ChanPost
+from post import FBPost, RedditPost, ChanPost
 
 import gcld3
 
@@ -20,6 +20,7 @@ class Board:
     """
     The general wrapper of a collection of posts.
     This class is titled `Board` but can generalize to:
+    - An entire platform
     - A Reddit sub-reddit
     - A 4Chan board
     - A Facebook page / group (?)
@@ -212,11 +213,17 @@ class Board:
         else:
             if post.platform == '4Chan':
                 post.reply_to = {rid for rid in post.reply_to if rid < pid}
+            else:
+                for rid in post.reply_to:
+                    if rid >= post.post_id:
+                        print(f'Bad IDs:  {post.post_id} --> {rid}')
+                        import pdb
+                        pdb.set_trace()
 
             avail = [rid for rid in post.reply_to if rid in self.posts]
             convo_id = min(avail) if avail else pid
 
-            if convo_id not in self._pid_to_convo_id:
+            if convo_id not in self._pid_to_convo_id and convo_id != pid:
                 # recurse
                 self.build_convo_path(self.posts[convo_id])
 
@@ -230,124 +237,23 @@ class Board:
         assert self.board_id == board.board_id
 
         # absorb posts
-        self._posts = {**self._posts, **board.posts}
+        try:
+            if 0.8 < len(board.posts) / len(self.posts) < 1.2:
+                self._posts = {**self._posts, **board.posts}
+            elif len(board.posts) < len(self.posts):
+                for post in board.posts.values():
+                    self._posts[post.post_id] = post
+            else:
+                for post in self.posts.values():
+                    board.posts[post.post_id] = post
+                self._posts = board.posts
+        except ZeroDivisionError:
+            self._posts = {**self._posts, **board.posts}
 
         # Reset other pointers
         self._pid_to_convo_id = {}
         self._convo_id_to_pids = defaultdict(set)
         self._conversations = {}
-
-
-class TwitterUser(Board):
-
-    @staticmethod
-    def load_thread(filepath):
-        src = filepath.split('_')[-1].replace('-tweets.json', '')
-        tweets = json.load(open(filepath))
-
-        # extract user
-        username = tweets[src]['user']['screen_name']
-        board = TwitterUser(username)
-
-        for tid, tweet in tweets.items():
-            if 'full_text' not in tweet:
-                continue
-
-            text = tweet['full_text']
-            ignore = {'hashtags', 'user_mentions', 'symbols'}
-            for k, vs in tweet['entities'].items():
-                if k not in ignore and vs:
-                    if k == 'media':
-                        for v in vs:
-                            text = re.sub(v['url'], v['display_url'], text)
-                    elif k == 'urls':
-                        for v in vs:
-                            text = re.sub(v['url'], v['expanded_url'], text)
-                    else:
-                        import pdb
-                        pdb .set_trace()
-
-            board.add_post(Tweet(**{
-                'post_id':    tweet['id'],
-                'text':       text,
-                'author':     tweet['user']['screen_name'],
-                'created_at': tweet['created_at'],
-                'board_id':   board,
-                'reply_to':   [tweet['in_reply_to_status_id']] if tweet['in_reply_to_status_id'] else [],
-                'platform':   'Twitter',
-                'lang':       tweet['lang'] if 'lang' in tweet else None
-            }))
-
-        return board
-
-    @staticmethod
-    def load_quote_month(filepath):
-        board = TwitterUser('CTQ')
-        with open(filepath) as fp:
-            for line in fp.readlines():
-                data = json.loads(line)
-                quoted = data['quoted_status']
-
-                # board = boards.get(datestring, TwitterUser(datestring))
-                src_id = quoted['id']
-
-                text = data['text']
-                ignore = {'hashtags', 'user_mentions', 'symbols'}
-                for k, vs in data['entities'].items():
-                    if k not in ignore and vs:
-                        if k == 'media':
-                            for v in vs:
-                                text = re.sub(v['url'], v['display_url'], text)
-                        elif k == 'urls':
-                            for v in vs:
-                                text = re.sub(v['url'], v['expanded_url'], text)
-                        else:
-                            import pdb
-                            pdb.set_trace()
-
-                t = Tweet(**{
-                    'post_id':    data['id'],
-                    'text':       text,
-                    'author':     data['user']['screen_name'],
-                    'created_at': data['created_at'],
-                    'board_id':   board.board_id,
-                    'reply_to':   [data['in_reply_to_status_id']] if data['in_reply_to_status_id'] else [],
-                    'root_id':    src_id,
-                    'platform':   'Twitter',
-                    'lang':       data['lang'] if 'lang' in data else None
-                })
-
-                text = quoted['text']
-                ignore = {'hashtags', 'user_mentions', 'symbols'}
-                for k, vs in quoted['entities'].items():
-                    if k not in ignore and vs:
-                        if k == 'media':
-                            for v in vs:
-                                text = re.sub(v['url'], v['display_url'], text)
-                        elif k == 'urls':
-                            for v in vs:
-                                text = re.sub(v['url'], v['expanded_url'], text)
-                        else:
-                            import pdb
-                            pdb.set_trace()
-
-                q = Tweet(**{
-                    'post_id':    quoted['id'],
-                    'text':       text,
-                    'author':     quoted['user']['screen_name'],
-                    'created_at': quoted['created_at'],
-                    'board_id':   board.board_id,
-                    'reply_to':   [quoted['in_reply_to_status_id']] if quoted['in_reply_to_status_id'] else [],
-                    'root_id':    src_id,
-                    'platform':   'Twitter',
-                    'lang':       quoted['lang'] if 'lang' in data else None
-                })
-
-                board.add_post(t)
-                board.add_post(q)
-                # boards[datestring] = board
-
-        return board
 
 
 class FBPage(Board):
