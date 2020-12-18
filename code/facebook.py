@@ -49,6 +49,7 @@ class FBPages(ConversationalDataset):
             pagenames.add(pgname)
 
         for pagename in pagenames:
+            pagename = pagename.replace('_', ' ').replace('%', '\\%')
             if skip_cached and glob(f'{ConversationalDataset.DATA_ROOT}conversations/{FBPages.CACHE_PATH}/{pagename}*.json'):
                 print(f'Skipping cached page: {pagename}')
                 continue
@@ -136,7 +137,7 @@ class FBPages(ConversationalDataset):
                     elif key == 'created_time':
                         post_cons['created_at'] = FBPost.parse_facebook_datestr(value)
                     elif key == 'from':
-                        post_cons['author'] = value['name']
+                        post_cons['author'] = value['name'] if 'name' in value else value['id']
                     elif key == 'userID':
                         if 'author' not in post_cons:
                             post_cons['author'] = value
@@ -284,7 +285,14 @@ class FBPages(ConversationalDataset):
     def load_cache(self):
         self.load_conversation(filepath=FBPages.CACHE_PATH, board_cons=Board, post_cons=FBPost)
 
+    def stat(self, filepattern='*', label='conversational'):
+        super(FBPages, self).stat(FBPages.CACHE_PATH, Board, FBPost, filepattern=filepattern, label=label)
+
 
 if __name__ == '__main__':
     dataset = FBPages()
-    dataset.load_batch()
+    # dataset.load_batch()
+
+    # dataset.stat(label='conversational')
+    # dataset.stat(label='token')
+    dataset.stat(label='topological')
