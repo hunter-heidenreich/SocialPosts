@@ -11,8 +11,6 @@ from tqdm import tqdm
 from glob import glob
 
 
-from post import FBPost
-from board import FBPage
 from utils import display_num
 
 
@@ -428,63 +426,3 @@ class ConversationalDataset:
         if dv_cur:
             with open(f'{outpath}dev.json', 'a+') as fp:
                 fp.writelines(dv_cur)
-
-
-class BuzzFace(ConversationalDataset):
-    def load(self):
-        super(BuzzFace, self).load()
-
-        for suffix in ['', '2', '3', 'full']:
-            for f in tqdm(glob(f'{self.DATA_ROOT}BuzzFace/data{suffix}/*/')):
-                page = FBPage.load_page(f[:-1])
-                if page.board_id in self._boards:
-                    self._boards[page.board_id].merge_board(page)
-                else:
-                    self._boards[page.board_id] = page
-
-        print(f'Loaded {len(self._boards)} Facebook pages')
-
-        for k in tqdm(self._boards):
-            self._boards[k].build_roots()
-
-    def write_jsons(self, filepath):
-        super(BuzzFace, self).write_jsons(filepath)
-
-    def load_jsons(self, filepath, board_obj=None, post_obj=None):
-        super(BuzzFace, self).load_jsons(filepath, FBPage, FBPost)
-
-    def cache(self):
-        self.write_jsons(filepath='Facebook/BF/')
-
-    def load_cache(self):
-        self.load_jsons(filepath='Facebook/BF/')
-
-
-class Outlets(ConversationalDataset):
-    def load(self):
-        super(Outlets, self).load()
-
-        for suffix in ['', '1', '2']:
-            for f in tqdm(glob(f'{self.DATA_ROOT}Outlets/data{suffix}/*/')):
-                page = FBPage.load_page(f[:-1])
-                if page.board_id in self._boards:
-                    self._boards[page.board_id].merge_board(page)
-                else:
-                    self._boards[page.board_id] = page
-
-        print(f'Loaded {len(self._boards)} Facebook pages')
-
-        for k in tqdm(self._boards):
-            self._boards[k].build_roots()
-
-    def write_jsons(self, filepath):
-        super(Outlets, self).write_jsons(filepath)
-
-    def load_jsons(self, filepath, board_obj=None, post_obj=None):
-        super(Outlets, self).load_jsons(filepath, FBPage, FBPost)
-
-    def cache(self):
-        self.write_jsons(filepath='Facebook/Outlets/')
-
-    def load_cache(self):
-        self.load_jsons(filepath='Facebook/Outlets/')
