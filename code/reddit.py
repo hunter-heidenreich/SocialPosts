@@ -311,7 +311,7 @@ class RedditExtractor(ConversationalDataset):
         os.makedirs(self.DATA_ROOT + 'conversations/' + filepath, exist_ok=True)
         for bid, board in self._boards.items():
             print(f'Building board: {bid}')
-            board.construct_conversations()
+            board.construct_conversations(full_rebuild=False)
 
             print(f'Extracting conversations')
             convos = board.conversations
@@ -333,8 +333,7 @@ class RedditExtractor(ConversationalDataset):
                 }) + '\n')
 
                 # remove all posts that are about to be written to disk
-                for post in posts:
-                    self._boards[bid].remove_post(post['post_id'])
+                board.delete_conversation(convo_id)
 
                 cur += len(posts)
                 if cur > ConversationalDataset.CONVO_SIZE:
@@ -346,16 +345,20 @@ class RedditExtractor(ConversationalDataset):
                     cur = 0
                     lines = []
 
+            board.prune_singletons(dt, thresh)
+
             if lines:
                 path = self.DATA_ROOT + 'conversations/' + filepath + f'/{bid}{date_str}_{batch:04d}.json'
                 with open(path, 'w+') as fp:
                     fp.writelines(lines)
                 # print(f'Wrote batch {batch}: {display_num(cur)} posts, {display_num(len(lines))} conversations')
 
-            print(f'Wrote {batch + 1} conversational chunks')
+                print(f'Wrote {batch + 1} conversational chunks')
+            else:
+                print(f'Wrote {batch} conversational chunks')
 
     def load_batch(self):
-        thresh = 185
+        thresh = 180
 
         # assure correct format and gather board names
         board_names = set()
@@ -390,10 +393,16 @@ class RedditExtractor(ConversationalDataset):
                         board.add_post(post)
 
                     self._boards[bid] = board
-                    print(f'Dumping posts older than {thresh} days!')
-                    self.dump_batch_by_date(RedditExtractor.CACHE_PATH, date_str, thresh=thresh)
 
-            self.dump_batch_by_date(RedditExtractor.CACHE_PATH, datetime.today().strftime('%Y-%m'), thresh=thresh)
+                    print(f'Posts in memory: {display_num(len(board.posts))}')
+
+                    # Only dump in 6 month increments
+                    dt = datetime.strptime(date_str, '%Y-%m')
+                    if dt.month in {1, 4, 7, 10}:
+                        print(f'Dumping posts older than {thresh} days!')
+                        self.dump_batch_by_date(RedditExtractor.CACHE_PATH, date_str, thresh=thresh)
+
+            self.dump_batch_by_date(RedditExtractor.CACHE_PATH, datetime.today().strftime('%Y-%m'), thresh=0)
             del self._boards[bid]
 
     def cache(self):

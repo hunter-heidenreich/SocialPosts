@@ -85,6 +85,27 @@ class Board:
                 self._pid_to_convo_id[p.post_id] = convo_id
                 self._convo_id_to_pids[convo_id].add(p.post_id)
 
+    def delete_conversation(self, convo_id):
+        for pid in self._convo_id_to_pids[convo_id]:
+            self.remove_post(pid)
+            del self._pid_to_convo_id[pid]
+
+        del self._convo_id_to_pids[convo_id]
+
+    def prune_singletons(self, dt, thresh):
+        to_delete = set()
+        for convo_id, pids in self._convo_id_to_pids.items():
+            if len(pids) == 1:
+                if (dt - self.posts[convo_id].created_at).days < thresh:
+                    continue
+
+                to_delete.add(convo_id)
+
+        for convo_id in to_delete:
+            del self._posts[convo_id]
+            del self._convo_id_to_pids[convo_id]
+            del self._pid_to_convo_id[convo_id]
+
     @staticmethod
     def filter_post(post):
         """
