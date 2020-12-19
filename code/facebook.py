@@ -49,9 +49,9 @@ class FBPages(ConversationalDataset):
             pagenames.add(pgname)
 
         for pagename in pagenames:
-            pagename = pagename.replace('_', ' ').replace('%', '\\%')
-            if skip_cached and glob(f'{ConversationalDataset.DATA_ROOT}conversations/{FBPages.CACHE_PATH}/{pagename}*.json'):
-                print(f'Skipping cached page: {pagename}')
+            pg = pagename.replace('_', ' ').replace('%', '\\%')
+            if skip_cached and glob(f'{ConversationalDataset.DATA_ROOT}conversations/{FBPages.CACHE_PATH}/{pg}_000[0-9].json'):
+                print(f'Skipping cached page: {pg}')
                 continue
 
             print(f'Parsing page: {pagename}')
@@ -285,14 +285,53 @@ class FBPages(ConversationalDataset):
     def load_cache(self):
         self.load_conversation(filepath=FBPages.CACHE_PATH, board_cons=Board, post_cons=FBPost)
 
-    def stat(self, filepattern='*', label='conversational'):
-        super(FBPages, self).stat(FBPages.CACHE_PATH, Board, FBPost, filepattern=filepattern, label=label)
+    def stat(self, filepattern='*', label='conversational', latex=False):
+        return super(FBPages, self).stat(FBPages.CACHE_PATH, Board, FBPost, filepattern=filepattern, label=label, latex=latex)
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+
     dataset = FBPages()
     # dataset.load_batch()
 
-    # dataset.stat(label='conversational')
-    # dataset.stat(label='token')
-    dataset.stat(label='topological')
+    # df = dataset.stat(label='conversational', latex=True)
+
+    # df['log_posts'] = np.log10(df['posts'])
+
+    # col = 'posts'
+    # col = 'log_posts'
+
+    # group = df.groupby(by='board_id')
+    # sizes = group.size()
+
+    # top_k = 9
+    #
+    # for ix, (key, sz) in enumerate(sorted(sizes.items(), key=lambda x: x[1], reverse=True)):
+    #     if ix < top_k:
+    #         continue
+    #
+    #     df = df.drop(group.get_group(key).index)
+    #
+    # # import pdb
+    # # pdb.set_trace()
+    #
+    # bins = 250
+    #
+    # # df.hist(column=col, grid=False, bins=bins)
+    #
+    # # df.hist(column=col, grid=False, bins=bins, by='board_id')
+    #
+    # df.boxplot(column=col, by='board_id')
+    # plt.show()
+
+    # df = dataset.stat(label='token', latex=True)
+
+    # col = 'tokens'
+
+    # bins = 250
+    # df.hist(column=col, grid=False, bins=bins)
+
+    dataset.stat(label='topological', latex=True)

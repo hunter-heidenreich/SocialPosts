@@ -123,13 +123,14 @@ class ConversationalDataset:
             yield bid, board
 
     @staticmethod
-    def _stat_conversational(conv):
+    def _stat_conversational(conv, stats=None):
         """
         Returns the conversational stats
         for a conversation chunk
         """
         pids = {post['post_id'] for post in conv}
-        return {
+
+        out = {
             'sources':       1 if any([len(post['reply_to']) == 0 for post in conv]) else 0,
             'conversations': 1,
             'posts':         len(conv),
@@ -137,8 +138,13 @@ class ConversationalDataset:
             'voices':        '\t\t\t'.join({post['author'] for post in conv if post['author']})
         }
 
+        if stats:
+            out = {k: v for k, v in out.items() if k in stats}
+
+        return out
+
     @staticmethod
-    def _stat_tokens(conv):
+    def _stat_tokens(conv, stats=None):
         """
         Produces stats about the space-separated tokens
         of a conversation chunk
@@ -146,14 +152,20 @@ class ConversationalDataset:
         tokens = re.split('\s+', ' '.join([post['text'] for post in conv]))
         normal = set(tokens)
         lower = {n.lower() for n in normal}
-        return {
+
+        out = {
             'unique':       '\t\t\t'.join(normal),
             'unique_lower': '\t\t\t'.join(lower),
             'tokens':       len(tokens)
         }
 
+        if stats:
+            out = {k: v for k, v in out.items() if k in stats}
+
+        return out
+
     @staticmethod
-    def _stat_topo(conv):
+    def _stat_topo(conv, stats=None):
         """
         Produces topological stats about a conversation
         chunk based on treating it like a
@@ -174,31 +186,35 @@ class ConversationalDataset:
                 if rid in graph.nodes:
                     graph.add_edge(pid, rid)
 
-        return {
+        out = {
             'nodes':        graph.number_of_nodes(),
             'density':      nx.density(graph),
             'longest_path': nx.algorithms.dag_longest_path_length(graph),
             'degrees':      np.average([graph.in_degree[n] + graph.out_degree[n] for n in graph.nodes]),
-            # 'in_degrees':   np.average([graph.in_degree[n] for n in graph.nodes]),
-            # 'out_degrees':  np.average([graph.out_degree[n] for n in graph.nodes])
         }
 
+        if stats:
+            out = {k: v for k, v in out.items() if k in stats}
+
+        return out
+
     @staticmethod
-    def _stat_conversation(conv, label='conversational'):
+    def _stat_conversation(conv, label='conversational', stats=None):
         """
         High-level interface for extracting stats and insights
         about conversational chunks
         """
         if label == 'conversational':
-            return ConversationalDataset._stat_conversational(conv)
+            return ConversationalDataset._stat_conversational(conv, stats=stats)
         elif label == 'token':
-            return ConversationalDataset._stat_tokens(conv)
+            return ConversationalDataset._stat_tokens(conv, stats=stats)
         elif label == 'topological':
-            return ConversationalDataset._stat_topo(conv)
+            return ConversationalDataset._stat_topo(conv, stats=stats)
         else:
             raise ValueError(f'Unrecognized label value: {label}')
 
-    def stat(self, filepath, board_cons, post_cons, filepattern='*', label='conversational'):
+    def stat(self, filepath, board_cons, post_cons, filepattern='*', label='conversational', stats=None, latex=False,
+             load_cache=True):
         """
         Given a file pattern, this function will compute
         stats about the cached conversations found
@@ -208,20 +224,32 @@ class ConversationalDataset:
         This function will print a latex table, by default.
         """
         df = None
-        for bid, board_chunk in self.conversation_iterator(filepath, board_cons, post_cons, filepattern):
-            chunk_stats = []
-            for conv in board_chunk.conversations.values():
-                s = self._stat_conversation(conv, label)
-                s['board_id'] = bid
-                chunk_stats.append(s)
 
-            if df is not None:
-                df = df.append(chunk_stats, ignore_index=True)
-            else:
-                df = pd.DataFrame(chunk_stats)
+        if load_cache:
+            try:
+                df = pd.read_pickle(f'{ConversationalDataset.DATA_ROOT}conversations/{filepath}_stat_{label}.pkl')
+            except FileNotFoundError:
+                pass
 
-        if df is not None:
+        if df is None:
+            for bid, board_chunk in self.conversation_iterator(filepath, board_cons, post_cons, filepattern):
+                chunk_stats = []
+                for conv in board_chunk.conversations.values():
+                    s = self._stat_conversation(conv, label, stats=stats)
+                    s['board_id'] = bid
+                    chunk_stats.append(s)
+
+                if df is not None:
+                    df = df.append(chunk_stats, ignore_index=True)
+                else:
+                    df = pd.DataFrame(chunk_stats)
+
+        if df is not None and latex:
             self._latex_table(df, label)
+
+        df.to_pickle(f'{ConversationalDataset.DATA_ROOT}conversations/{filepath}_stat_{label}.pkl')
+
+        return df
 
     @staticmethod
     def _latex_table(df, label):

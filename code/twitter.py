@@ -5,9 +5,9 @@ from datetime import datetime
 from glob import glob
 from tqdm import tqdm
 
-from post import *
-from board import *
-from dataset import *
+from post import UniversalPost
+from board import Board
+from dataset import ConversationalDataset
 
 
 class Tweet(UniversalPost):
@@ -172,8 +172,8 @@ class Slush(ConversationalDataset):
     def load_cache(self):
         self.load_conversation(filepath=Slush.CACHE_PATH, board_cons=Board, post_cons=Tweet)
 
-    def stat(self, filepattern='*', label='conversational'):
-        super(Slush, self).stat(Slush.CACHE_PATH, Board, Tweet, filepattern=filepattern, label=label)
+    def stat(self, filepattern='*', label='conversational', stats=None):
+        return super(Slush, self).stat(Slush.CACHE_PATH, Board, Tweet, filepattern=filepattern, label=label, stats=stats)
 
 
 class NewstweetThreads(ConversationalDataset):
@@ -243,6 +243,9 @@ class CoordinatedTargetingQuotes(ConversationalDataset):
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     # data = NewstweetThreads()
     # data = CoordinatedTargetingQuotes()
     data = Slush(include_news_tweet_threads=True)
@@ -252,8 +255,14 @@ if __name__ == '__main__':
 
     # data.load_cache()
 
-    # data.stat(label='conversational')
-    data.stat(label='token')
+    df = data.stat(label='conversational', stats=('posts',))
+    # data.stat(label='token')
     # data.stat(label='topological')
+
+    sns.displot(data=df, x="posts")
+    plt.show()
+
+    import pdb
+    pdb.set_trace()
 
 

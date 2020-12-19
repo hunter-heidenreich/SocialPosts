@@ -93,7 +93,7 @@ class RedditCMV(ConversationalDataset):
         self.load_conversation(filepath=RedditCMV.CACHE_PATH, board_cons=Board, post_cons=RedditPost)
 
     def stat(self, filepattern='*', label='conversational'):
-        super(RedditCMV, self).stat(RedditCMV.CACHE_PATH, Board, RedditPost, filepattern=filepattern, label=label)
+        return super(RedditCMV, self).stat(RedditCMV.CACHE_PATH, Board, RedditPost, filepattern=filepattern, label=label)
 
     @staticmethod
     def load_cmv_dump(file_path='/Users/hsh28/PycharmProjects/ah-stahp/naacl2018-before-name-calling-habernal-et-al/data/cmv-full-2017-09-22/'):
@@ -413,15 +413,27 @@ class RedditExtractor(ConversationalDataset):
 
 
 if __name__ == '__main__':
-    # dataset = RedditCMV()
-    dataset = RedditExtractor()
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
 
-    dataset.load_batch()
+    dataset = RedditCMV()
+    # dataset = RedditExtractor()
+
+    # dataset.load_batch()
 
     # dataset.load()
     # dataset.cache()
 
-    # dataset.stat(label='conversational')
+    df = dataset.stat(label='conversational')
+
+    df['log_posts'] = np.log10(df['posts'])
+
+    sns.displot(data=df, x="log_posts")
+    plt.show()
+
+    import pdb
+    pdb.set_trace()
 
 
 
