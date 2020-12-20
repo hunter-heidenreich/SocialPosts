@@ -244,22 +244,34 @@ class CoordinatedTargetingQuotes(ConversationalDataset):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import numpy as np
     import seaborn as sns
 
     # data = NewstweetThreads()
     # data = CoordinatedTargetingQuotes()
-    data = Slush(include_news_tweet_threads=True)
+    dataset = Slush(include_news_tweet_threads=True)
 
     # data.load()
     # data.cache()
 
     # data.load_cache()
 
-    df = data.stat(label='conversational', stats=('posts',))
+    # df = data.stat(label='conversational', stats=('posts',))
     # data.stat(label='token')
     # data.stat(label='topological')
 
-    sns.displot(data=df, x="posts")
+    # sns.displot(data=df, x="posts")
+    # plt.show()
+
+    df = dataset.stat(label='tokenizer_roberta')
+
+    # col = 'token_len'
+    col = 'log_token_len'
+
+    df['log_token_len'] = np.log10(df['token_len'])
+
+    bins = 250
+    df.hist(column=col, grid=False, bins=bins)
     plt.show()
 
     import pdb

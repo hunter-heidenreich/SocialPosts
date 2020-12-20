@@ -90,7 +90,7 @@ class Chan(ConversationalDataset):
                                filepattern=f'{self.BOARD}_*')
 
     def stat(self, filepattern='*', label='conversational'):
-        super(Chan, self).stat(Chan.CACHE_PATH, Board, ChanPost, filepattern=filepattern, label=label)
+        return super(Chan, self).stat(Chan.CACHE_PATH, Board, ChanPost, filepattern=filepattern, label=label)
 
     @staticmethod
     def load_chunk(board_name, chunk):
@@ -126,5 +126,20 @@ class Chan(ConversationalDataset):
 
 
 if __name__ == '__main__':
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     dataset = Chan()
     dataset.stat(label='topological')
+
+    df = dataset.stat(label='tokenizer_roberta')
+
+    # col = 'token_len'
+    col = 'log_token_len'
+
+    df['log_token_len'] = np.log10(df['token_len'])
+
+    bins = 250
+    df.hist(column=col, grid=False, bins=bins)
+    plt.show()
+

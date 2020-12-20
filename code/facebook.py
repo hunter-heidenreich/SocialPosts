@@ -334,4 +334,27 @@ if __name__ == '__main__':
     # bins = 250
     # df.hist(column=col, grid=False, bins=bins)
 
-    dataset.stat(label='topological', latex=True)
+    # dataset.stat(label='topological', latex=True)
+
+    df = dataset.stat(label='tokenizer_roberta')
+
+    # col = 'token_len'
+    col = 'log_token_len'
+
+    df['log_token_len'] = np.log10(df['token_len'])
+
+    bins = 250
+    df.hist(column=col, grid=False, bins=bins)
+    plt.show()
+
+    # plt.clf()
+
+    # bins *= 2
+    # df.hist(column=col, grid=False, bins=bins)
+    # plt.show()
+
+    # plt.clf()
+
+    # bins *= 2
+    # df.hist(column=col, grid=False, bins=bins)
+    # plt.show()

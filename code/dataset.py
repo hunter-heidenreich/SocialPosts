@@ -10,8 +10,14 @@ import networkx as nx
 from tqdm import tqdm
 from glob import glob
 
+from transformers import RobertaTokenizerFast
+
 
 from utils import display_num
+
+TOKENIZERS = {
+    'roberta': RobertaTokenizerFast.from_pretrained('roberta-base')
+}
 
 
 class ConversationalDataset:
@@ -199,6 +205,23 @@ class ConversationalDataset:
         return out
 
     @staticmethod
+    def _stat_tokenizer(conv, tokenizer='roberta'):
+        if tokenizer == 'roberta':
+            tok = TOKENIZERS[tokenizer]
+        else:
+            raise ValueError(f'Unrecognized tokenizer: {tokenizer}')
+
+        pids = [p['post_id'] for p in conv]
+
+        txts = [p['text'] for p in conv]
+        txts = tok(txts)['input_ids']
+        txts = [len(ts) for ts in txts]
+
+        out = [{'post_id': pid, 'token_len': ts} for (pid, ts) in zip(pids, txts)]
+
+        return out
+
+    @staticmethod
     def _stat_conversation(conv, label='conversational', stats=None):
         """
         High-level interface for extracting stats and insights
@@ -210,6 +233,8 @@ class ConversationalDataset:
             return ConversationalDataset._stat_tokens(conv, stats=stats)
         elif label == 'topological':
             return ConversationalDataset._stat_topo(conv, stats=stats)
+        elif 'tokenizer' in label:
+            return ConversationalDataset._stat_tokenizer(conv, tokenizer=label.split('_')[-1])
         else:
             raise ValueError(f'Unrecognized label value: {label}')
 
@@ -234,10 +259,16 @@ class ConversationalDataset:
         if df is None:
             for bid, board_chunk in self.conversation_iterator(filepath, board_cons, post_cons, filepattern):
                 chunk_stats = []
-                for conv in board_chunk.conversations.values():
+                for conv in tqdm(board_chunk.conversations.values()):
                     s = self._stat_conversation(conv, label, stats=stats)
-                    s['board_id'] = bid
-                    chunk_stats.append(s)
+
+                    if type(s) == list:
+                        for s_ in s:
+                            s_['board_id'] = bid
+                        chunk_stats.extend(s)
+                    else:
+                        s['board_id'] = bid
+                        chunk_stats.append(s)
 
                 if df is not None:
                     df = df.append(chunk_stats, ignore_index=True)

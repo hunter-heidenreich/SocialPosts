@@ -411,29 +411,34 @@ class RedditExtractor(ConversationalDataset):
     def load_cache(self):
         self.load_conversation(filepath=RedditExtractor.CACHE_PATH, board_cons=Board, post_cons=RedditPost)
 
+    def stat(self, filepattern='*', label='conversational', latex=False):
+        return super(RedditExtractor, self).stat(RedditExtractor.CACHE_PATH, Board, RedditPost, filepattern=filepattern,
+                                                 label=label, latex=latex)
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import seaborn as sns
     import numpy as np
 
-    dataset = RedditCMV()
-    # dataset = RedditExtractor()
+    # dataset = RedditCMV()
+    dataset = RedditExtractor()
 
     # dataset.load_batch()
 
     # dataset.load()
     # dataset.cache()
 
-    df = dataset.stat(label='conversational')
+    # df = dataset.stat(label='conversational', latex=True)
+    df = dataset.stat(label='token', latex=True)
 
-    df['log_posts'] = np.log10(df['posts'])
+    # df['log_posts'] = np.log10(df['posts'])
+    #
+    # sns.displot(data=df, x="log_posts")
+    # plt.show()
 
-    sns.displot(data=df, x="log_posts")
-    plt.show()
-
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
 
 
 
