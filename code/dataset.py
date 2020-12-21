@@ -238,6 +238,22 @@ class ConversationalDataset:
         else:
             raise ValueError(f'Unrecognized label value: {label}')
 
+    @staticmethod
+    def scan_tokenizer(filepath, label='tokenizer_roberta', threshes=(32, 64, 128, 256)):
+        try:
+            df = pd.read_pickle(f'{ConversationalDataset.DATA_ROOT}conversations/{filepath}_stat_{label}.pkl')
+
+            print(f'Mean size: {np.mean(df.token_len):.2f}')
+            print(f'Std. Dev.: {np.std(df.token_len):.2f}')
+
+            for thresh in threshes:
+                soft = np.mean([thresh / max(thresh, x) for x in df.token_len])
+                hard = df[df.token_len <= thresh].shape[0] / df.shape[0]
+                print(f'{thresh} >=: {100 * hard:.2f} / {100 * soft:.2f}')
+
+        except FileNotFoundError:
+            print(f'Not generated {label} sizes for {filepath}.\n\nCache stat and try again')
+
     def stat(self, filepath, board_cons, post_cons, filepattern='*', label='conversational', stats=None, latex=False,
              load_cache=True):
         """

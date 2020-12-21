@@ -130,16 +130,18 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     dataset = Chan()
-    dataset.stat(label='topological')
+    # dataset.stat(label='topological')
 
-    df = dataset.stat(label='tokenizer_roberta')
+    # df = dataset.stat(label='tokenizer_roberta')
 
     # col = 'token_len'
-    col = 'log_token_len'
+    # col = 'log_token_len'
 
-    df['log_token_len'] = np.log10(df['token_len'])
+    # df['log_token_len'] = np.log10(df['token_len'])
 
-    bins = 250
-    df.hist(column=col, grid=False, bins=bins)
-    plt.show()
+    # bins = 250
+    # df.hist(column=col, grid=False, bins=bins)
+    # plt.show()
+
+    dataset.scan_tokenizer('4chan')
 

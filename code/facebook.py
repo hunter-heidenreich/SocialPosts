@@ -339,17 +339,11 @@ if __name__ == '__main__':
     df = dataset.stat(label='tokenizer_roberta')
 
     # col = 'token_len'
-    col = 'log_token_len'
+    # col = 'log_token_len'
 
-    df['log_token_len'] = np.log10(df['token_len'])
+    # df['log_token_len'] = np.log10(df['token_len'])
 
-    bins = 250
-    df.hist(column=col, grid=False, bins=bins)
-    plt.show()
-
-    # plt.clf()
-
-    # bins *= 2
+    # bins = 250
     # df.hist(column=col, grid=False, bins=bins)
     # plt.show()
 
@@ -358,3 +352,11 @@ if __name__ == '__main__':
     # bins *= 2
     # df.hist(column=col, grid=False, bins=bins)
     # plt.show()
+
+    # plt.clf()
+
+    # bins *= 2
+    # df.hist(column=col, grid=False, bins=bins)
+    # plt.show()
+
+    dataset.scan_tokenizer('Facebook')

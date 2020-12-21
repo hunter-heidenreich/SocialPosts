@@ -263,18 +263,20 @@ if __name__ == '__main__':
     # sns.displot(data=df, x="posts")
     # plt.show()
 
-    df = dataset.stat(label='tokenizer_roberta')
+    # df = dataset.stat(label='tokenizer_roberta')
 
     # col = 'token_len'
-    col = 'log_token_len'
+    # col = 'log_token_len'
 
-    df['log_token_len'] = np.log10(df['token_len'])
+    # df['log_token_len'] = np.log10(df['token_len'])
 
-    bins = 250
-    df.hist(column=col, grid=False, bins=bins)
-    plt.show()
+    # bins = 250
+    # df.hist(column=col, grid=False, bins=bins)
+    # plt.show()
 
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
+
+    dataset.scan_tokenizer(dataset.CACHE_PATH)
 
 
