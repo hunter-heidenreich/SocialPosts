@@ -442,8 +442,9 @@ if __name__ == '__main__':
 
     # dataset = RedditCMV()
     dataset = RedditExtractor()
-    dataset.batch_redact(RedditExtractor.CACHE_PATH, RedditExtractor.CACHE_PATH,
-                         Board, RedditPost)
+    # dataset.batch_redact(RedditExtractor.CACHE_PATH, RedditExtractor.CACHE_PATH,
+    #                      Board, RedditPost)
+    dataset.round_robin_chunk(RedditExtractor.CACHE_PATH, 'data/batched/reddit/', Board, RedditPost)
 
     # dataset.load_batch()
 

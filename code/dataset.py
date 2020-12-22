@@ -563,9 +563,8 @@ class ConversationalDataset:
                 with open(f'{outpath}train_{ix}.json', 'a+') as fp:
                     fp.writelines(tr_cur[ix])
 
-                tr_cur = {r: [] for r in range(radix)}
-
             with open(f'{outpath}dev.json', 'a+') as fp:
                 fp.writelines(dv_cur)
 
+            tr_cur = {r: [] for r in range(radix)}
             dv_cur = []
