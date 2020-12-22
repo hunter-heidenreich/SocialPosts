@@ -172,8 +172,9 @@ class Slush(ConversationalDataset):
     def load_cache(self):
         self.load_conversation(filepath=Slush.CACHE_PATH, board_cons=Board, post_cons=Tweet)
 
-    def stat(self, filepattern='*', label='conversational', stats=None):
-        return super(Slush, self).stat(Slush.CACHE_PATH, Board, Tweet, filepattern=filepattern, label=label, stats=stats)
+    def stat(self, filepattern='*', label='conversational', stats=None, latex=False):
+        return super(Slush, self).stat(Slush.CACHE_PATH, Board, Tweet, filepattern=filepattern,
+                                       label=label, stats=stats, latex=latex)
 
 
 class NewstweetThreads(ConversationalDataset):
@@ -251,19 +252,21 @@ if __name__ == '__main__':
     # data = CoordinatedTargetingQuotes()
     dataset = Slush(include_news_tweet_threads=True)
 
-    # data.load()
-    # data.cache()
+    # dataset.load()
+    # dataset.cache()
 
     # data.load_cache()
 
-    # df = data.stat(label='conversational', stats=('posts',))
-    # data.stat(label='token')
-    # data.stat(label='topological')
+    # df = dataset.stat(label='conversational', latex=True)
+    # dataset.stat(label='token', latex=True)
+    # dataset.stat(label='topological', latex=True)
+
+    # dataset.round_robin_chunk(Slush.CACHE_PATH, 'data/batched/twitter/', Board, Tweet)
 
     # sns.displot(data=df, x="posts")
     # plt.show()
 
-    # df = dataset.stat(label='tokenizer_roberta')
+    df = dataset.stat(label='tokenizer_roberta')
 
     # col = 'token_len'
     # col = 'log_token_len'
@@ -277,6 +280,6 @@ if __name__ == '__main__':
     # import pdb
     # pdb.set_trace()
 
-    dataset.scan_tokenizer(dataset.CACHE_PATH)
+    # dataset.scan_tokenizer(dataset.CACHE_PATH)
 
 

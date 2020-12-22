@@ -501,3 +501,53 @@ class ConversationalDataset:
         if dv_cur:
             with open(f'{outpath}dev.json', 'a+') as fp:
                 fp.writelines(dv_cur)
+
+    def round_robin_chunk(self, pattern, outpath, board_cons, post_cons,
+                          seed=42, radix=25, dev_ratio=0.01):
+        np.random.seed(seed)
+        random.seed = seed
+
+        tr_batch = 0
+        tr_cur = {r: [] for r in range(radix)}
+        dv_cur = []
+
+        for bid, board in self.conversation_iterator(pattern, board_cons, post_cons):
+            print(f'Batching: {bid}')
+            pairs = board.generate_pairs()
+            dev_size = int(np.ceil(dev_ratio * len(pairs)))
+            print(f'Found {len(pairs)}, holding {dev_size} for dev!')
+
+            random.shuffle(pairs)
+            train_ps, dev_ps = pairs[dev_size:], pairs[:dev_size]
+
+            for pair in tqdm(train_ps):
+                post = pair['post']
+                reply = pair['reply']
+
+                if len(post) > 0 or len(reply) > 0:
+                    tr_cur[tr_batch].append(json.dumps({
+                        'post':  post,
+                        'reply': reply
+                    }) + '\n')
+
+                    tr_batch = (tr_batch + 1) % radix
+
+            for pair in tqdm(dev_ps):
+                post = pair['post']
+                reply = pair['reply']
+                if len(post) > 0 or len(reply) > 0:
+                    dv_cur.append(json.dumps({
+                        'post':  post,
+                        'reply': reply
+                    }) + '\n')
+
+            for ix in range(radix):
+                with open(f'{outpath}train_{ix}.json', 'a+') as fp:
+                    fp.writelines(tr_cur[ix])
+
+                tr_cur = {r: [] for r in range(radix)}
+
+            with open(f'{outpath}dev.json', 'a+') as fp:
+                fp.writelines(dv_cur)
+
+            dv_cur = []
