@@ -266,7 +266,7 @@ if __name__ == '__main__':
     # sns.displot(data=df, x="posts")
     # plt.show()
 
-    df = dataset.stat(label='tokenizer_roberta')
+    # df = dataset.stat(label='tokenizer_roberta')
 
     # col = 'token_len'
     # col = 'log_token_len'
@@ -280,6 +280,6 @@ if __name__ == '__main__':
     # import pdb
     # pdb.set_trace()
 
-    # dataset.scan_tokenizer(dataset.CACHE_PATH)
+    dataset.scan_tokenizer(dataset.CACHE_PATH)
 
 

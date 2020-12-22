@@ -25,6 +25,25 @@ class RedditPost(UniversalPost):
 
         return super(RedditPost, self).get_mentions() | set(names)
 
+    def redact(self, redact_map):
+        """
+        Given a set of terms,
+        this function will properly redact
+        all instances of those terms.
+
+        This function is mainly to use for redacting usernames
+        or user mentions, so as to protect users
+        """
+        # Reddit user regex
+        names = re.findall(r'/?u/([A-Za-z0-9_-]+)', self.text)
+        for name in names:
+            if name in redact_map:
+                self.text = re.sub(name, redact_map[name], self.text)
+
+        # for in-build anonymization, this will convert to an appropriate username
+        if self.author in redact_map:
+            self.author = redact_map[self.author]
+
     @staticmethod
     def load_raw(data, board_id=None):
 
