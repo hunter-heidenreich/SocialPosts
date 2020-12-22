@@ -116,8 +116,9 @@ class ConversationalDataset:
         for ix, f in enumerate(paths):
             print(f'{f} {ix+1}/{len(paths)}')
 
-            bid = '_'.join(f.split('/')[-1].split('_')[:-1])
-            board = board_cons(bid)
+            # bid = '_'.join(f.split('/')[-1].split('_')[:-1])
+            bid = f.split('/')[-1].replace('.json', '')
+            board = board_cons('_'.join(f.split('/')[-1].split('_')[:-1]))
 
             convs = {}
             with open(f) as fp:
@@ -439,6 +440,23 @@ class ConversationalDataset:
                 ns = self._boards[board].redact()
                 line = f'{board}\t{json.dumps(ns)}\n'
                 fp.write(line)
+
+    def batch_redact(self, pattern, outpath, board_cons, post_cons):
+        for bid, board in self.conversation_iterator(pattern, board_cons, post_cons):
+            ns = board.redact()
+
+            with open(f'{self.DATA_ROOT}conversations/{outpath}_redact.json', 'a+') as fp:
+                fp.write(f'{bid}\t{json.dumps(ns)}\n')
+
+            lines = []
+            for convo_id, posts in tqdm(board.conversations.items()):
+                lines.append(json.dumps({
+                    'convo_id': convo_id,
+                    'posts':    posts
+                }) + '\n')
+
+            with open(f'{self.DATA_ROOT}conversations/{outpath}/{bid}.json', 'w+') as fp:
+                fp.writelines(lines)
 
     def batch_chunk(self, pattern, outpath, board_cons, post_cons,
                     seed=42, batch_size=2048 * 2048, dev_ratio=0.01):

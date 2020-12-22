@@ -423,6 +423,8 @@ if __name__ == '__main__':
 
     # dataset = RedditCMV()
     dataset = RedditExtractor()
+    dataset.batch_redact(RedditExtractor.CACHE_PATH, RedditExtractor.CACHE_PATH,
+                         Board, RedditPost)
 
     # dataset.load_batch()
 
@@ -430,7 +432,7 @@ if __name__ == '__main__':
     # dataset.cache()
 
     # df = dataset.stat(label='conversational', latex=True)
-    df = dataset.stat(label='token', latex=True)
+    # df = dataset.stat(label='token', latex=True)
 
     # df['log_posts'] = np.log10(df['posts'])
     #
